@@ -1,0 +1,133 @@
+import type { HeaderSeverity } from '../interfaces/header-checker.interface';
+
+export interface HeaderWeightConfig {
+  name: string;
+  headerName: string;
+  severity: HeaderSeverity;
+  weight: number;
+  description: string;
+  expectedValue: string;
+}
+
+export const HEADER_WEIGHTS: HeaderWeightConfig[] = [
+  {
+    name: 'CSP',
+    headerName: 'Content-Security-Policy',
+    severity: 'critical',
+    weight: 25,
+    description: 'Prevents XSS and data injection attacks',
+    expectedValue: 'Present with restrictive policy (default-src, script-src, object-src)',
+  },
+  {
+    name: 'HSTS',
+    headerName: 'Strict-Transport-Security',
+    severity: 'high',
+    weight: 15,
+    description: 'Enforces HTTPS connections, prevents SSL stripping',
+    expectedValue: 'max-age=31536000; includeSubDomains',
+  },
+  {
+    name: 'X-Frame-Options',
+    headerName: 'X-Frame-Options',
+    severity: 'high',
+    weight: 15,
+    description: 'Prevents clickjacking attacks',
+    expectedValue: 'DENY or SAMEORIGIN',
+  },
+  {
+    name: 'X-Content-Type-Options',
+    headerName: 'X-Content-Type-Options',
+    severity: 'medium',
+    weight: 10,
+    description: 'Prevents MIME type sniffing',
+    expectedValue: 'nosniff',
+  },
+  {
+    name: 'Referrer-Policy',
+    headerName: 'Referrer-Policy',
+    severity: 'medium',
+    weight: 10,
+    description: 'Controls referrer information leakage',
+    expectedValue: 'strict-origin-when-cross-origin',
+  },
+  {
+    name: 'Permissions-Policy',
+    headerName: 'Permissions-Policy',
+    severity: 'medium',
+    weight: 10,
+    description: 'Restricts browser API access',
+    expectedValue: 'Restrictive policy without wildcards',
+  },
+  {
+    name: 'Cache-Control',
+    headerName: 'Cache-Control',
+    severity: 'medium',
+    weight: 10,
+    description: 'Prevents caching of sensitive data',
+    expectedValue: 'no-store for sensitive endpoints',
+  },
+  {
+    name: 'CORS',
+    headerName: 'Access-Control-Allow-Origin',
+    severity: 'high',
+    weight: 15,
+    description: 'Prevents cross-origin resource abuse',
+    expectedValue: 'Specific origin, not wildcard',
+  },
+  {
+    name: 'Set-Cookie',
+    headerName: 'Set-Cookie',
+    severity: 'high',
+    weight: 15,
+    description: 'Ensures cookie security flags (Secure, HttpOnly, SameSite)',
+    expectedValue: 'Secure; HttpOnly; SameSite=Lax/Strict',
+  },
+  {
+    name: 'CORP',
+    headerName: 'Cross-Origin-Resource-Policy',
+    severity: 'medium',
+    weight: 10,
+    description: 'Prevents cross-origin resource loading',
+    expectedValue: 'same-origin or same-site',
+  },
+  {
+    name: 'COOP',
+    headerName: 'Cross-Origin-Opener-Policy',
+    severity: 'medium',
+    weight: 10,
+    description: 'Isolates browsing context against cross-origin attacks',
+    expectedValue: 'same-origin',
+  },
+  {
+    name: 'COEP',
+    headerName: 'Cross-Origin-Embedder-Policy',
+    severity: 'low',
+    weight: 5,
+    description: 'Prevents cross-origin resource embedding',
+    expectedValue: 'require-corp',
+  },
+  {
+    name: 'X-Powered-By',
+    headerName: 'X-Powered-By',
+    severity: 'low',
+    weight: 5,
+    description: 'Information disclosure - should be removed',
+    expectedValue: 'Not present',
+  },
+  {
+    name: 'Server-Header',
+    headerName: 'Server',
+    severity: 'low',
+    weight: 5,
+    description: 'Information disclosure - should be minimal',
+    expectedValue: 'Minimal server info or not present',
+  },
+  {
+    name: 'X-XSS-Protection',
+    headerName: 'X-XSS-Protection',
+    severity: 'low',
+    weight: 5,
+    description: 'Deprecated header, noted for legacy compatibility',
+    expectedValue: '0 (deprecated, use CSP instead)',
+  },
+];
