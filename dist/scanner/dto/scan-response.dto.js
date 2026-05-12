@@ -22,6 +22,10 @@ class ScanResponseDto {
     metadata;
     tls;
     dns;
+    securityFiles;
+    sri;
+    sensitiveFiles;
+    fingerprint;
 }
 exports.ScanResponseDto = ScanResponseDto;
 __decorate([
@@ -64,4 +68,20 @@ __decorate([
     (0, swagger_1.ApiProperty)({ description: 'DNS security records (SPF, DKIM, DMARC)' }),
     __metadata("design:type", Object)
 ], ScanResponseDto.prototype, "dns", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Security files (security.txt RFC 9116, robots.txt)' }),
+    __metadata("design:type", Object)
+], ScanResponseDto.prototype, "securityFiles", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Subresource Integrity (SRI) analysis' }),
+    __metadata("design:type", Object)
+], ScanResponseDto.prototype, "sri", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Sensitive files exposure check' }),
+    __metadata("design:type", Object)
+], ScanResponseDto.prototype, "sensitiveFiles", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Technology fingerprinting and CVE detection' }),
+    __metadata("design:type", Object)
+], ScanResponseDto.prototype, "fingerprint", void 0);
 //# sourceMappingURL=scan-response.dto.js.map

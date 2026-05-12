@@ -583,6 +583,7 @@ body {
   border: 1px solid #475569;
   border-radius: 8px;
   padding: 0.75rem;
+  min-width: 0;
 }
 
 .rec-column-title {
@@ -601,6 +602,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  min-width: 0;
 }
 
 .rec-column-item {
@@ -610,6 +612,20 @@ body {
   padding: 0.4rem;
   background: #0f172a;
   border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+  overflow: hidden;
+}
+
+.rec-column-item:hover {
+  background: #1a2332;
+}
+
+.rec-column-item.truncated {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .recommendations-list {
@@ -711,6 +727,368 @@ body {
 .tls-grade-bad {
   color: #dc2626;
   font-weight: 600;
+}
+
+/* SSL Expiration Warning */
+.ssl-warning {
+  max-width: 960px;
+  margin: 0 auto 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ssl-warning.ssl-expired {
+  background: #450a0a;
+  border: 1px solid #dc2626;
+  color: #fca5a5;
+}
+
+.ssl-warning.ssl-expiring {
+  background: #451a03;
+  border: 1px solid #f97316;
+  color: #fdba74;
+}
+
+.ssl-warning strong {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ssl-warning span {
+  font-size: 0.8rem;
+}
+
+/* Security Files */
+.security-files-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .security-files-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.security-card {
+  background: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.security-card.found {
+  border-left: 3px solid #22c55e;
+}
+
+.security-card.missing {
+  border-left: 3px solid #f97316;
+}
+
+.security-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.security-path {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.security-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.security-status.status-ok {
+  color: #22c55e;
+}
+
+.security-status.status-missing {
+  color: #f97316;
+}
+
+.security-content {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  word-break: break-all;
+  white-space: pre-wrap;
+  margin-bottom: 0.5rem;
+  padding: 0.4rem;
+  background: #0f172a;
+  border-radius: 4px;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.security-finding {
+  font-size: 0.8rem;
+  color: #e2e8f0;
+  margin-bottom: 0.25rem;
+  line-height: 1.4;
+}
+
+.security-rec {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+/* SRI */
+.no-data {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  padding: 0.5rem 0;
+}
+
+.sri-summary {
+  background: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.sri-grade {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.sri-grade.good .sri-stat { color: #22c55e; }
+.sri-grade.warn .sri-stat { color: #eab308; }
+.sri-grade.bad .sri-stat { color: #dc2626; }
+
+.sri-stat {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.sri-label {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.sri-finding {
+  font-size: 0.85rem;
+  color: #e2e8f0;
+  margin-bottom: 0.5rem;
+}
+
+.sri-rec {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-bottom: 0.5rem;
+}
+
+.sri-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.sri-item {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.5rem;
+  background: #0f172a;
+  border-radius: 4px;
+}
+
+.sri-tag {
+  color: #22c55e;
+  font-weight: 600;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.sri-src {
+  color: #e2e8f0;
+  word-break: break-all;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  cursor: pointer;
+}
+
+.sri-src.truncated {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 400px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Sensitive Files */
+.sens-warning {
+  background: #450a0a;
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  color: #fca5a5;
+  font-size: 0.85rem;
+}
+
+.sens-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.sens-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 6px;
+}
+
+.sens-path {
+  font-size: 0.85rem;
+  color: #dc2626;
+  font-weight: 600;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.sens-finding {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  text-align: right;
+}
+
+/* Fingerprinting */
+.fp-summary {
+  font-size: 0.85rem;
+  color: #e2e8f0;
+  margin-bottom: 0.75rem;
+}
+
+.fp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.fp-card {
+  background: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.fp-card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.fp-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.fp-version {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.fp-confidence {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  margin-left: auto;
+}
+
+.fp-confidence.high { background: #15803d; color: white; }
+.fp-confidence.medium { background: #a16207; color: white; }
+.fp-confidence.low { background: #64748b; color: white; }
+
+.fp-category {
+  font-size: 0.7rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.fp-evidence {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  padding: 0.15rem 0;
+}
+
+/* CVE cards */
+.cve-section h3 {
+  font-size: 1rem;
+  color: #dc2626;
+  margin-bottom: 0.75rem;
+}
+
+.cve-card {
+  background: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  border-left: 3px solid #dc2626;
+}
+
+.cve-card.severity-high { border-left-color: #f97316; }
+.cve-card.severity-medium { border-left-color: #eab308; }
+.cve-card.severity-low { border-left-color: #22c55e; }
+
+.cve-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.cve-id {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.cve-severity {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+}
+
+.cve-severity.critical { background: #dc2626; color: white; }
+.cve-severity.high { background: #f97316; color: white; }
+.cve-severity.medium { background: #eab308; color: black; }
+.cve-severity.low { background: #22c55e; color: white; }
+
+.cve-desc {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  line-height: 1.4;
 }
 
 /* DNS / Email Security */

@@ -10,7 +10,7 @@ exports.ReportService = void 0;
 const common_1 = require("@nestjs/common");
 let ReportService = class ReportService {
     generate(input) {
-        const recommendations = this.generateRecommendations(input.headers.headers, input.tls, input.dns);
+        const recommendations = this.generateRecommendations(input.headers.headers, input.tls, input.dns, input.securityFiles, input.sri, input.sensitiveFiles, input.fingerprint);
         return {
             url: input.url,
             timestamp: new Date().toISOString(),
@@ -22,9 +22,13 @@ let ReportService = class ReportService {
             metadata: input.metadata,
             tls: input.tls,
             dns: input.dns,
+            securityFiles: input.securityFiles,
+            sri: input.sri,
+            sensitiveFiles: input.sensitiveFiles,
+            fingerprint: input.fingerprint,
         };
     }
-    generateRecommendations(headers, tls, dns) {
+    generateRecommendations(headers, tls, dns, securityFiles, sri, sensitiveFiles, fingerprint) {
         const criticalIssues = headers
             .filter((h) => h.severity === 'critical' && h.grade < 1.0)
             .map((h) => `[CRITICAL] ${h.recommendation}`);
@@ -57,6 +61,37 @@ let ReportService = class ReportService {
                 tlsRecs.push(`[CRITICAL] Outdated TLS version: ${tls.tlsVersion}. Upgrade to TLS 1.2 or 1.3.`);
             }
         }
+        const fileRecs = [];
+        if (securityFiles.checked) {
+            if (securityFiles.securityTxt.grade < 1.0 && securityFiles.securityTxt.present === false) {
+                fileRecs.push(`[MEDIUM] ${securityFiles.securityTxt.recommendation}`);
+            }
+            if (securityFiles.securityTxt.grade < 1.0 && securityFiles.securityTxt.present && securityFiles.securityTxt.grade < 0.6) {
+                fileRecs.push(`[MEDIUM] ${securityFiles.securityTxt.recommendation}`);
+            }
+            if (securityFiles.robotsTxt.grade < 1.0 && securityFiles.robotsTxt.present === false) {
+                fileRecs.push(`[LOW] ${securityFiles.robotsTxt.recommendation}`);
+            }
+            if (securityFiles.robotsTxt.grade < 1.0 && securityFiles.robotsTxt.present && securityFiles.robotsTxt.grade <= 0.5) {
+                fileRecs.push(`[LOW] ${securityFiles.robotsTxt.recommendation}`);
+            }
+        }
+        const cveRecs = [];
+        if (fingerprint.checked && fingerprint.cves.length > 0) {
+            for (const cve of fingerprint.cves) {
+                const level = cve.severity === 'critical' ? 'CRITICAL' : cve.severity === 'high' ? 'HIGH' : 'MEDIUM';
+                cveRecs.push(`[${level}] ${cve.id}: ${cve.description}`);
+            }
+        }
+        const sriRecs = [];
+        if (sri.checked && sri.insecureResources.length > 0) {
+            sriRecs.push(`[MEDIUM] ${sri.recommendation}`);
+        }
+        const sensRecs = [];
+        if (sensitiveFiles.checked && sensitiveFiles.exposedCount > 0) {
+            const exposedPaths = sensitiveFiles.files.filter((f) => f.exposed).map((f) => f.path);
+            sensRecs.push(`[HIGH] ${sensitiveFiles.exposedCount} sensitive file(s) exposed: ${exposedPaths.join(', ')}`);
+        }
         const dnsRecs = [];
         if (dns.checked && dns.error) {
             dnsRecs.push(`[MEDIUM] DNS check error: ${dns.error}`);
@@ -72,7 +107,7 @@ let ReportService = class ReportService {
                 dnsRecs.push(`[MEDIUM] ${dns.dmarc.recommendation}`);
             }
         }
-        return [...tlsRecs, ...dnsRecs, ...criticalIssues, ...highIssues, ...mediumIssues, ...lowIssues];
+        return [...tlsRecs, ...dnsRecs, ...fileRecs, ...sriRecs, ...sensRecs, ...cveRecs, ...criticalIssues, ...highIssues, ...mediumIssues, ...lowIssues];
     }
 };
 exports.ReportService = ReportService;

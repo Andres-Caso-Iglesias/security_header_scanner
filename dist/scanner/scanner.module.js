@@ -14,6 +14,10 @@ const scanner_service_1 = require("./scanner.service");
 const http_client_service_1 = require("./http-client/http-client.service");
 const tls_checker_service_1 = require("./tls/tls-checker.service");
 const dns_checker_service_1 = require("./dns/dns-checker.service");
+const security_file_checker_service_1 = require("./files/security-file-checker.service");
+const sensitive_file_checker_service_1 = require("./files/sensitive-file-checker.service");
+const sri_checker_service_1 = require("./content/sri-checker.service");
+const tech_fingerprinter_service_1 = require("./fingerprint/tech-fingerprinter.service");
 const export_service_1 = require("../report/export/export.service");
 const analyzer_module_1 = require("../analyzer/analyzer.module");
 const compliance_module_1 = require("../compliance/compliance.module");
@@ -33,7 +37,7 @@ exports.ScannerModule = ScannerModule = __decorate([
             report_module_1.ReportModule,
         ],
         controllers: [scanner_controller_1.ScannerController],
-        providers: [scanner_service_1.ScannerService, http_client_service_1.HttpClientService, tls_checker_service_1.TlsCheckerService, dns_checker_service_1.DnsCheckerService, export_service_1.ExportService],
+        providers: [scanner_service_1.ScannerService, http_client_service_1.HttpClientService, tls_checker_service_1.TlsCheckerService, dns_checker_service_1.DnsCheckerService, security_file_checker_service_1.SecurityFileCheckerService, sensitive_file_checker_service_1.SensitiveFileCheckerService, sri_checker_service_1.SriCheckerService, tech_fingerprinter_service_1.TechFingerprinterService, export_service_1.ExportService],
         exports: [scanner_service_1.ScannerService],
     })
 ], ScannerModule);

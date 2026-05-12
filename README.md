@@ -110,9 +110,12 @@ auditoria-web/
 │   ├── main.ts                   # Bootstrap + Swagger
 │   ├── app.module.ts             # Modulo raiz
 │   ├── common/                   # Interfaces, constantes, filtros, pipes
-│   ├── scanner/                  # Controller, DTOs, HTTP client, TLS, DNS
+│   ├── scanner/                  # Controller, DTOs, HTTP client, TLS, DNS, files, content, fingerprint
 │   │   ├── tls/                  #   Verificacion TLS/SSL
-│   │   └── dns/                  #   Verificacion DNS (SPF/DKIM/DMARC)
+│   │   ├── dns/                  #   Verificacion DNS (SPF/DKIM/DMARC)
+│   │   ├── files/                #   Security.txt + robots.txt + sensitive files
+│   │   ├── content/              #   SRI (Subresource Integrity)
+│   │   └── fingerprint/          #   Tech fingerprinting + CVE detection
 │   ├── analyzer/                 # Score calculator + 15 header checkers
 │   ├── compliance/               # Mappers OWASP Top 10 + NIS2
 │   └── report/
@@ -301,3 +304,36 @@ Escanea una URL y devuelve un reporte de seguridad.
 | X-Powered-By | low | 5 | Detecta fuga de tecnologia |
 | Server | low | 5 | Detecta fuga de informacion del servidor |
 | X-XSS-Protection | low | 5 | Header deprecado (se prefiere CSP) |
+
+## Verificaciones Adicionales
+
+### TLS / SSL
+- Version del protocolo (TLSv1.3, TLSv1.2, etc.)
+- Estado del certificado (validez, emisor, expiracion, SAN, self-signed, wildcard)
+- Alerta preventiva cuando el certificado expira en menos de 30 dias
+
+### DNS / Email Security
+- **SPF**: registro TXT del dominio verificando mecanismo all e include
+- **DKIM**: busqueda en selectores comunes (default, google, selector1, etc.)
+- **DMARC**: registro `_dmarc.{dominio}` con politica, reporting y cobertura
+
+### Archivos de Seguridad
+- **security.txt** (RFC 9116): deteccion y analisis de campos obligatorios (Contact, Expires)
+- **robots.txt**: deteccion de rutas sensibles expuestas (admin, backup, .git, .env)
+
+### Subresource Integrity (SRI)
+- Analisis de etiquetas `<script src>` y `<link rel="stylesheet" href>` en el HTML
+- Verifica presencia del atributo `integrity` en cada recurso externo
+- Recursos sin SRI se muestran truncados con opcion de expandir al hacer click
+
+### Archivos Sensibles
+- Escaneo de 40 rutas sensibles comunes (`.env`, `.git/config`, `phpinfo.php`, `web.config`, `.htaccess`, etc.)
+- HEAD requests en lotes de 5 en paralelo para detectar exposicion accidental
+
+### Fingerprinting de Tecnologias
+- Deteccion de CMS: WordPress, Joomla, Drupal (via meta generator, paths, headers)
+- Deteccion de frameworks: Express, ASP.NET, Laravel, Django, jQuery, Bootstrap
+- Deteccion de servidores: Nginx, Apache, Cloudflare
+- Deteccion de runtimes: PHP
+- Base de datos integrada de **20 CVEs conocidos** mapeados por tecnologia y version
+- Las recomendaciones de CVEs aparecen con severidad CRITICAL/HIGH/MEDIUM

@@ -29,6 +29,76 @@ interface DnsRecord {
   recommendation: string
 }
 
+interface SecurityFileCheck {
+  path: string
+  present: boolean
+  statusCode: number | null
+  content: string | null
+  grade: number
+  finding: string
+  recommendation: string
+}
+
+interface SriResource {
+  tag: string
+  src: string
+  hasIntegrity: boolean
+}
+
+interface SriInfo {
+  checked: boolean
+  totalResources: number
+  secureResources: number
+  insecureResources: SriResource[]
+  grade: number
+  finding: string
+  recommendation: string
+}
+
+interface SensitiveFileResult {
+  path: string
+  statusCode: number | null
+  exposed: boolean
+  finding: string
+}
+
+interface DetectedTech {
+  name: string
+  version: string | null
+  category: string
+  confidence: string
+  evidence: string[]
+}
+
+interface CveInfo {
+  id: string
+  description: string
+  severity: string
+  affectedVersions: string
+}
+
+interface TechFingerprintInfo {
+  checked: boolean
+  technologies: DetectedTech[]
+  cves: CveInfo[]
+  grade: number
+  summary: string
+}
+
+interface SensitiveFilesInfo {
+  checked: boolean
+  files: SensitiveFileResult[]
+  exposedCount: number
+  grade: number
+}
+
+interface SecurityFileInfo {
+  checked: boolean
+  securityTxt: SecurityFileCheck
+  robotsTxt: SecurityFileCheck
+  grade: number
+}
+
 interface DnsInfo {
   hostname: string
   checked: boolean
@@ -84,6 +154,10 @@ interface ScanResult {
   }
   tls: TlsInfo
   dns: DnsInfo
+  securityFiles: SecurityFileInfo
+  sri: SriInfo
+  sensitiveFiles: SensitiveFilesInfo
+  fingerprint: TechFingerprintInfo
 }
 
 function getGradeColor(grade: string): string {
@@ -172,6 +246,24 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [exporting, setExporting] = useState<'pdf' | 'json' | null>(null)
+  const [expandedSri, setExpandedSri] = useState<Set<number>>(new Set())
+  const [expandedRec, setExpandedRec] = useState<Set<string>>(new Set())
+
+  function toggleSri(i: number) {
+    setExpandedSri((prev) => {
+      const next = new Set(prev)
+      if (next.has(i)) next.delete(i); else next.add(i)
+      return next
+    })
+  }
+
+  function toggleRec(key: string) {
+    setExpandedRec((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key); else next.add(key)
+      return next
+    })
+  }
 
   async function handleScan() {
     if (!url.trim()) return
@@ -331,6 +423,17 @@ function App() {
               </div>
             </div>
           </div>
+
+          {result.tls.checked && result.tls.certificate && (result.tls.certificate.expired || (result.tls.certificate.expiresInDays >= 0 && result.tls.certificate.expiresInDays < 30)) && (
+            <div className={`ssl-warning ${result.tls.certificate.expired ? 'ssl-expired' : 'ssl-expiring'}`}>
+              <strong>{result.tls.certificate.expired ? 'CERTIFICADO EXPIRADO' : 'Certificado proximo a expirar'}</strong>
+              <span>
+                {result.tls.certificate.expired
+                  ? `El certificado SSL expiro el ${result.tls.certificate.validTo}. Debe renovarse inmediatamente.`
+                  : `El certificado SSL expira en ${result.tls.certificate.expiresInDays} dias (${result.tls.certificate.validTo}). Renueve antes de la fecha de vencimiento.`}
+              </span>
+            </div>
+          )}
 
           <div className="export-buttons">
             <button className="copy-button" onClick={copyReport}>
@@ -539,6 +642,116 @@ function App() {
             </div>
           </div>
 
+          <section className="section">
+            <h2>Archivos de Seguridad</h2>
+            <div className="security-files-grid">
+              {[result.securityFiles.securityTxt, result.securityFiles.robotsTxt].map((file) => (
+                <div key={file.path} className={`security-card ${file.present ? 'found' : 'missing'}`}>
+                  <div className="security-card-header">
+                    <span className="security-path">{file.path}</span>
+                    <span className={`security-status ${file.present ? 'status-ok' : 'status-missing'}`}>
+                      {file.present ? 'Encontrado' : 'No encontrado'}
+                    </span>
+                  </div>
+                  {file.content && (
+                    <pre className="security-content">{file.content}</pre>
+                  )}
+                  <p className="security-finding">{file.finding}</p>
+                  {file.grade < 1.0 && (
+                    <p className="security-rec">{file.recommendation}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="section">
+            <h2>Subresource Integrity (SRI)</h2>
+            {result.sri.totalResources === 0 ? (
+              <p className="no-data">No se detectaron recursos externos (scripts o estilos) en la pagina.</p>
+            ) : (
+              <div className="sri-summary">
+                <div className={`sri-grade ${result.sri.grade >= 1 ? 'good' : result.sri.grade >= 0.5 ? 'warn' : 'bad'}`}>
+                  <span className="sri-stat">{result.sri.secureResources}/{result.sri.totalResources}</span>
+                  <span className="sri-label">recursos con SRI</span>
+                </div>
+                <p className="sri-finding">{result.sri.finding}</p>
+                {result.sri.insecureResources.length > 0 && (
+                  <>
+                    <p className="sri-rec">{result.sri.recommendation}</p>
+                    <div className="sri-list">
+                      {result.sri.insecureResources.map((r, i) => (
+                        <div key={i} className="sri-item">
+                          <span className="sri-tag">{r.tag}</span>
+                          <span className={`sri-src ${!expandedSri.has(i) ? 'truncated' : ''}`} onClick={() => toggleSri(i)}>
+                            {r.src}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </section>
+
+          <section className="section">
+            <h2>Archivos Sensibles</h2>
+            {result.sensitiveFiles.exposedCount === 0 ? (
+              <p className="no-data">No se detectaron archivos sensibles expuestos.</p>
+            ) : (
+              <div>
+                <div className="sens-warning">
+                  <strong>{result.sensitiveFiles.exposedCount} archivo(s) sensible(s) expuesto(s)</strong>
+                </div>
+                <div className="sens-list">
+                  {result.sensitiveFiles.files.filter((f) => f.exposed).map((f, i) => (
+                    <div key={i} className="sens-item">
+                      <span className="sens-path">{f.path}</span>
+                      <span className="sens-finding">{f.finding}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section className="section">
+            <h2>Huella Digital (Fingerprinting)</h2>
+            <p className="fp-summary">{result.fingerprint.summary}</p>
+            {result.fingerprint.technologies.length > 0 && (
+              <div className="fp-grid">
+                {result.fingerprint.technologies.map((tech, i) => (
+                  <div key={i} className="fp-card">
+                    <div className="fp-card-top">
+                      <span className="fp-name">{tech.name}</span>
+                      {tech.version && <span className="fp-version">{tech.version}</span>}
+                      <span className={`fp-confidence ${tech.confidence}`}>{tech.confidence}</span>
+                    </div>
+                    <span className="fp-category">{tech.category}</span>
+                    {tech.evidence.map((e, j) => (
+                      <div key={j} className="fp-evidence">{e}</div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+            {result.fingerprint.cves.length > 0 && (
+              <div className="cve-section">
+                <h3>CVEs Detectados ({result.fingerprint.cves.length})</h3>
+                {result.fingerprint.cves.map((cve, i) => (
+                  <div key={i} className={`cve-card severity-${cve.severity}`}>
+                    <div className="cve-top">
+                      <span className="cve-id">{cve.id}</span>
+                      <span className={`cve-severity ${cve.severity}`}>{cve.severity}</span>
+                    </div>
+                    <p className="cve-desc">{cve.description}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
           {result.recommendations.length > 0 && (
             <div className="rec-fullwidth">
               <h2>Recomendaciones</h2>
@@ -554,7 +767,9 @@ function App() {
                         <h3 className="rec-column-title" style={{ color: sevColor }}>{severity}</h3>
                         <ul className="rec-column-list">
                           {items.map((rec, i) => (
-                            <li key={i} className="rec-column-item">{rec.replace(`[${severity}] `, '')}</li>
+                            <li key={i} className={`rec-column-item ${!expandedRec.has(`${severity}-${i}`) ? 'truncated' : ''}`} onClick={() => toggleRec(`${severity}-${i}`)}>
+                              {rec.replace(`[${severity}] `, '')}
+                            </li>
                           ))}
                         </ul>
                       </div>

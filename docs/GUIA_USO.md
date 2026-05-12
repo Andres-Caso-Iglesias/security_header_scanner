@@ -23,7 +23,8 @@ Guia practica para utilizar la herramienta de auditoria de seguridad web y enten
 3. Ingrese la URL completa incluyendo el protocolo (https://ejemplo.com)
 4. Presione Enter o haga clic en "Escanear"
 5. Espere unos segundos mientras se analizan los headers
-6. Revise el reporte generado
+6. Revise el reporte generado con las secciones de headers, TLS, DNS, archivos de seguridad y recomendaciones
+7. Si el certificado SSL esta expirado o proximo a expirar, aparecera un aviso destacado en la parte superior del reporte
 
 ### Via API (curl)
 
@@ -115,7 +116,7 @@ El reporte incluye dos secciones de compliance:
 | Control | Evalua | Que significa |
 |---------|--------|---------------|
 | A01 - Broken Access Control | CORS, cookies | Evalua si hay controles de acceso debiles que permitan acceso no autorizado |
-| A05 - Security Misconfiguration | Headers de seguridad, TLS/SSL, SPF/DKIM/DMARC | Evalua si faltan headers de seguridad esenciales, TLS desactualizado, certificados expirados, registros DNS de correo ausentes o debiles |
+| A05 - Security Misconfiguration | Headers de seguridad, TLS/SSL, SPF/DKIM/DMARC, security.txt, robots.txt | Evalua si faltan headers de seguridad esenciales, TLS desactualizado, certificados expirados, registros DNS de correo ausentes, archivos de seguridad faltantes o mal configurados |
 | A06 - Vulnerable Components | X-Powered-By, Server | Evalua si el sitio expone informacion sobre tecnologias que podrian tener vulnerabilidades conocidas |
 
 #### NIS2 Directive (2023) - Articulo 21
@@ -191,6 +192,38 @@ Wildcard: true           -> funcional pero riesgo mayor
 Expires in: 97 dias      -> renovacion no urgente
 Grade: 0.75 (75%)        -> aceptable, mejorable
 ```
+
+### /.well-known/security.txt (RFC 9116)
+
+**Severidad:** medium
+**Proposito:** Proporciona un estandar para que los investigadores de seguridad puedan reportar vulnerabilidades.
+
+El archivo security.txt permite a los administradores publicar informacion de contacto y politicas para el reporte de vulnerabilidades de seguridad. Debe ubicarse en `/.well-known/security.txt` del dominio.
+
+**Campos requeridos (RFC 9116):**
+- `Contact:` Direccion (URL o email) para reportar vulnerabilidades
+- `Expires:` Fecha y hora tras la cual la informacion deja de ser valida
+
+**Campos recomendados:**
+- `Encryption:` URL con clave publica para comunicacion cifrada
+- `Policy:` URL con la politica de divulgacion de vulnerabilidades
+
+**Evaluacion:**
+- Con Contact y Expires = cumple el RFC 9116
+- Solo Contact = parcialmente conforme
+- Sin Contact = no cumple el estandar
+
+### /robots.txt
+
+**Severidad:** low
+**Proposito:** Guiar a los crawlers sobre que rutas pueden o no acceder.
+
+El archivo robots.txt controla el comportamiento de crawlers y bots. Aunque su proposito es legitimo, las rutas en `Disallow` pueden revelar directorios que el administrador considera sensibles.
+
+**Evaluacion:**
+- Con User-agent y Disallow = correctamente configurado
+- Sin Disallow = permite todo acceso
+- Rutas sensibles expuestas (admin, backup, .git, .env, config) = riesgo de informacion
 
 ### SPF (Sender Policy Framework)
 

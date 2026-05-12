@@ -5,6 +5,10 @@ import { ScannerService } from './scanner.service';
 import { HttpClientService } from './http-client/http-client.service';
 import { TlsCheckerService } from './tls/tls-checker.service';
 import { DnsCheckerService } from './dns/dns-checker.service';
+import { SecurityFileCheckerService } from './files/security-file-checker.service';
+import { SensitiveFileCheckerService } from './files/sensitive-file-checker.service';
+import { SriCheckerService } from './content/sri-checker.service';
+import { TechFingerprinterService } from './fingerprint/tech-fingerprinter.service';
 import { ExportService } from '../report/export/export.service';
 import { AnalyzerModule } from '../analyzer/analyzer.module';
 import { ComplianceModule } from '../compliance/compliance.module';
@@ -21,7 +25,7 @@ import { ReportModule } from '../report/report.module';
     ReportModule,
   ],
   controllers: [ScannerController],
-  providers: [ScannerService, HttpClientService, TlsCheckerService, DnsCheckerService, ExportService],
+  providers: [ScannerService, HttpClientService, TlsCheckerService, DnsCheckerService, SecurityFileCheckerService, SensitiveFileCheckerService, SriCheckerService, TechFingerprinterService, ExportService],
   exports: [ScannerService],
 })
 export class ScannerModule {}

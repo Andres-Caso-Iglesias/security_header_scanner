@@ -1,6 +1,10 @@
 import { HttpClientService } from './http-client/http-client.service';
 import { TlsCheckerService } from './tls/tls-checker.service';
 import { DnsCheckerService } from './dns/dns-checker.service';
+import { SecurityFileCheckerService } from './files/security-file-checker.service';
+import { SensitiveFileCheckerService } from './files/sensitive-file-checker.service';
+import { SriCheckerService } from './content/sri-checker.service';
+import { TechFingerprinterService } from './fingerprint/tech-fingerprinter.service';
 import { AnalyzerService } from '../analyzer/analyzer.service';
 import { ComplianceService } from '../compliance/compliance.service';
 import { ReportService } from '../report/report.service';
@@ -9,9 +13,13 @@ export declare class ScannerService {
     private readonly httpClient;
     private readonly tlsChecker;
     private readonly dnsChecker;
+    private readonly securityFileChecker;
+    private readonly sensitiveFileChecker;
+    private readonly sriChecker;
+    private readonly techFingerprinter;
     private readonly analyzer;
     private readonly compliance;
     private readonly report;
-    constructor(httpClient: HttpClientService, tlsChecker: TlsCheckerService, dnsChecker: DnsCheckerService, analyzer: AnalyzerService, compliance: ComplianceService, report: ReportService);
+    constructor(httpClient: HttpClientService, tlsChecker: TlsCheckerService, dnsChecker: DnsCheckerService, securityFileChecker: SecurityFileCheckerService, sensitiveFileChecker: SensitiveFileCheckerService, sriChecker: SriCheckerService, techFingerprinter: TechFingerprinterService, analyzer: AnalyzerService, compliance: ComplianceService, report: ReportService);
     scan(url: string): Promise<ScanResult>;
 }

@@ -3,6 +3,10 @@ import { ScannerService } from '../../../src/scanner/scanner.service';
 import { HttpClientService } from '../../../src/scanner/http-client/http-client.service';
 import { TlsCheckerService } from '../../../src/scanner/tls/tls-checker.service';
 import { DnsCheckerService } from '../../../src/scanner/dns/dns-checker.service';
+import { SecurityFileCheckerService } from '../../../src/scanner/files/security-file-checker.service';
+import { SensitiveFileCheckerService } from '../../../src/scanner/files/sensitive-file-checker.service';
+import { SriCheckerService } from '../../../src/scanner/content/sri-checker.service';
+import { TechFingerprinterService } from '../../../src/scanner/fingerprint/tech-fingerprinter.service';
 import { AnalyzerService } from '../../../src/analyzer/analyzer.service';
 import { ComplianceService } from '../../../src/compliance/compliance.service';
 import { ReportService } from '../../../src/report/report.service';
@@ -21,6 +25,26 @@ describe('ScannerService', () => {
     dkim: { type: 'DKIM', value: 'v=DKIM1; p=key', present: true, grade: 1.0, finding: 'DKIM OK', recommendation: '' },
     dmarc: { type: 'DMARC', value: 'v=DMARC1; p=reject', present: true, grade: 1.0, finding: 'DMARC OK', recommendation: '' },
     grade: 1.0,
+  };
+
+  const mockFingerprintResult = {
+    checked: true, technologies: [], cves: [], grade: 1.0, summary: 'No technologies detected',
+  };
+
+  const mockSriResult = {
+    checked: true, totalResources: 0, secureResources: 0, insecureResources: [], grade: 1.0,
+    finding: 'No external resources', recommendation: 'No action needed',
+  };
+
+  const mockSensitiveFilesResult = {
+    checked: true, files: [], exposedCount: 0, grade: 1.0,
+  };
+
+  const mockSecurityFilesResult = {
+    checked: true,
+    securityTxt: { path: '/.well-known/security.txt', present: false, statusCode: 404, content: null, grade: 0, finding: 'Not found', recommendation: 'Add security.txt' },
+    robotsTxt: { path: '/robots.txt', present: false, statusCode: 404, content: null, grade: 0, finding: 'Not found', recommendation: 'Add robots.txt' },
+    grade: 0,
   };
 
   const mockTlsResult = {
@@ -56,6 +80,10 @@ describe('ScannerService', () => {
         { provide: HttpClientService, useValue: httpClient },
         { provide: TlsCheckerService, useValue: { check: jest.fn().mockResolvedValue(mockTlsResult) } },
         { provide: DnsCheckerService, useValue: { check: jest.fn().mockResolvedValue(mockDnsResult) } },
+        { provide: SecurityFileCheckerService, useValue: { check: jest.fn().mockResolvedValue(mockSecurityFilesResult) } },
+        { provide: SensitiveFileCheckerService, useValue: { check: jest.fn().mockResolvedValue(mockSensitiveFilesResult) } },
+        { provide: SriCheckerService, useValue: { check: jest.fn().mockResolvedValue(mockSriResult) } },
+        { provide: TechFingerprinterService, useValue: { fingerprint: jest.fn().mockResolvedValue(mockFingerprintResult) } },
         AnalyzerService,
         ScoreCalculator,
         ComplianceService,

@@ -139,6 +139,36 @@ async scan(url: string): Promise<ScanResult> {
 }
 ```
 
+### SecurityFileCheckerService
+
+Servicio que verifica la existencia y contenido de archivos de seguridad estandar en el servidor web.
+
+**Ubicacion:** `src/scanner/files/security-file-checker.service.ts`
+
+**Archivos verificados:**
+
+| Archivo | Estandar | Que evalua |
+|---------|----------|------------|
+| `/.well-known/security.txt` | RFC 9116 | Campos obligatorios: `Contact:`, `Expires:`. Opcionales: `Encryption:`, `Policy:`, `Hiring:` |
+| `/robots.txt` | Estandar de crawlers | Directivas `User-agent`, `Disallow`, `Allow`, `Sitemap`. Detecta rutas sensibles expuestas (admin, .git, .env, backup, config) |
+
+**Metodo:** Utiliza el mismo `HttpModule` (Axios) que el `HttpClientService`, con timeout de 5s y 3 redirects.
+
+**Analisis security.txt:**
+- `Contact:` presente + `Expires:` presente = grade 1.0
+- Solo `Contact:` presente = grade 0.6
+- Sin `Contact:` = grade 0.3
+- No encontrado (HTTP 404) = grade 0
+
+**Analisis robots.txt:**
+- Con `User-agent` y `Disallow` = grade 0.8
+- Sin `Disallow` = grade 0.4
+- Con rutas sensibles expuestas = grade 0.5
+- Sin `User-agent` = grade 0.2
+- No encontrado = grade 0
+
+**Ejecucion:** Se ejecuta en paralelo con HTTP fetch, TLS check y DNS check via `Promise.all`.
+
 ### DnsCheckerService
 
 Servicio que realiza verificaciones de seguridad DNS: SPF, DKIM y DMARC. Se ejecuta en paralelo con HTTP y TLS via `Promise.all`.

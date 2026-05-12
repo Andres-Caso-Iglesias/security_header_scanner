@@ -109,6 +109,18 @@ Dos tarjetas en grilla de 2 columnas (dentro de una fila 50/50 junto a DNS):
 - Conexion: version TLS, host, puerto, grade
 - Certificado: sujeto, emisor, validez, self-signed, wildcard, SAN
 
+### SSL Expiration Warning
+
+Banner prominente debajo del resumen del scan que aparece cuando el certificado SSL:
+- Ha expirado: fondo rojo con mensaje "CERTIFICADO EXPIRADO"
+- Expira en menos de 30 dias: fondo naranja con cuenta regresiva
+
+### Security Files Section
+
+Dos tarjetas en grilla de 2 columnas:
+- `/.well-known/security.txt`: Muestra si existe, su contenido y analisis de campos RFC 9116
+- `/robots.txt`: Muestra si existe, su contenido y deteccion de rutas sensibles
+
 ### DNS Section
 
 Tres tarjetas en columna (dentro de una fila 50/50 junto a TLS):
@@ -150,14 +162,16 @@ La seccion de resultados utiliza un layout de ancho completo:
 |  |  Headers de Seguridad      | Cumplimiento Normativo     | |
 |  |  3 tarjetas por fila       | OWASP + NIS2              | |
 |  +----------------------------+----------------------------+ |
-|                                                             |
+|  |  Security Files (1/2)      | Security Files (1/2)       | |
+|  |  security.txt              | robots.txt                 | |
 |  +----------------------------+----------------------------+ |
 |  |  TLS / SSL (col-half)      | DNS / Email (col-half)    | |
 |  |  Conexion + Certificado    | SPF + DKIM + DMARC        | |
 |  +----------------------------+----------------------------+ |
 |                                                             |
 |  +--------------------------------------------------------+ |
-|  |  Recomendaciones (max-width: 960px, centrado)           | |
+|  |  Recomendaciones (full-width, 4 columnas)                | |
+|  |  CRITICAL | HIGH | MEDIUM | LOW                         | |
 |  +--------------------------------------------------------+ |
 +------------------------------------------------------------+
 ```

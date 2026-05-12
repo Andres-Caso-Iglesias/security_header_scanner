@@ -1,6 +1,9 @@
 import type { HeaderResult } from './header-checker.interface';
 import type { TlsInfo } from './tls-info.interface';
 import type { DnsInfo } from './dns-info.interface';
+import type { SecurityFileInfo } from './security-file-info.interface';
+import type { SriInfo, SensitiveFilesInfo } from './content-info.interface';
+import type { TechFingerprintInfo } from './fingerprint-info.interface';
 
 export interface ComplianceFinding {
   control: string;
@@ -33,4 +36,8 @@ export interface ScanResult {
   metadata: ScanMetadata;
   tls: TlsInfo;
   dns: DnsInfo;
+  securityFiles: SecurityFileInfo;
+  sri: SriInfo;
+  sensitiveFiles: SensitiveFilesInfo;
+  fingerprint: TechFingerprintInfo;
 }
