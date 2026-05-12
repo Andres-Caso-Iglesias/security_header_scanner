@@ -144,6 +144,28 @@ body {
 /* Results */
 .results {
   animation: fadeIn 0.3s ease-in;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+}
+
+.results .result-header {
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.results .export-buttons {
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 1rem;
+}
+
+.results > .section {
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 1rem;
 }
 
 @keyframes fadeIn {
@@ -288,10 +310,13 @@ body {
   display: flex;
   gap: 1.5rem;
   align-items: flex-start;
-  width: 100vw;
-  margin-left: calc(-50vw + 50%);
-  padding-left: calc(50vw - 50% + 1rem);
-  padding-right: calc(50vw - 50% + 1rem);
+  padding: 0 2rem;
+}
+
+@media (max-width: 768px) {
+  .columns-layout {
+    flex-direction: column;
+  }
 }
 
 .column-main {
@@ -302,16 +327,6 @@ body {
 .column-side {
   flex: 1;
   min-width: 0;
-}
-
-@media (max-width: 768px) {
-  .columns-layout {
-    flex-direction: column;
-    width: 100%;
-    margin-left: 0;
-    padding-left: 0;
-    padding-right: 0;
-  }
 }
 
 .section {
@@ -329,8 +344,14 @@ body {
 /* Header Grid */
 .header-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .header-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .header-card {
