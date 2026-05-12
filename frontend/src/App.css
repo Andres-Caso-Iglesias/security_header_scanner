@@ -30,7 +30,7 @@ body {
 }
 
 .header p {
-  color: #94a3b8;
+  color: #e2e8f0;
   font-size: 0.95rem;
 }
 
@@ -58,7 +58,7 @@ body {
 .url-input {
   flex: 1;
   padding: 0.75rem 1rem;
-  border: 1px solid #334155;
+  border: 1px solid #475569;
   border-radius: 8px;
   background: #1e293b;
   color: #e2e8f0;
@@ -77,19 +77,20 @@ body {
 
 .scan-button {
   padding: 0.75rem 1.5rem;
-  background: #3b82f6;
-  color: white;
-  border: none;
+  background: #2563eb;
+  color: #ffffff;
+  border: 1px solid #60a5fa;
   border-radius: 8px;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, border-color 0.2s;
   min-width: 120px;
 }
 
 .scan-button:hover:not(:disabled) {
-  background: #2563eb;
+  background: #1d4ed8;
+  border-color: #93c5fd;
 }
 
 .scan-button:disabled {
@@ -123,7 +124,7 @@ body {
 .loading {
   text-align: center;
   padding: 2rem;
-  color: #94a3b8;
+  color: #e2e8f0;
 }
 
 .loading-bar {
@@ -197,7 +198,7 @@ body {
   align-items: center;
   gap: 2rem;
   background: #1e293b;
-  border: 1px solid #334155;
+  border: 1px solid #475569;
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
@@ -228,7 +229,7 @@ body {
 
 .score-value {
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: #e2e8f0;
   display: block;
   margin-top: 0.25rem;
 }
@@ -247,7 +248,7 @@ body {
 }
 
 .meta-label {
-  color: #64748b;
+  color: #e2e8f0;
   font-size: 0.85rem;
   min-width: 80px;
 }
@@ -262,7 +263,7 @@ body {
 .copy-button {
   align-self: flex-start;
   padding: 0.5rem 1rem;
-  background: #334155;
+  background: #475569;
   color: #e2e8f0;
   border: 1px solid #475569;
   border-radius: 6px;
@@ -369,7 +370,7 @@ body {
   color: #f1f5f9;
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid #475569;
 }
 
 /* Header Grid */
@@ -387,7 +388,7 @@ body {
 
 .header-card {
   background: #1e293b;
-  border: 1px solid #334155;
+  border: 1px solid #475569;
   border-radius: 8px;
   padding: 0.75rem;
   transition: border-color 0.2s;
@@ -430,7 +431,7 @@ body {
 
 .header-grade-bar {
   height: 4px;
-  background: #334155;
+  background: #475569;
   border-radius: 2px;
   margin-bottom: 0.5rem;
   overflow: hidden;
@@ -454,25 +455,25 @@ body {
   font-weight: 700;
   padding: 0.1rem 0.4rem;
   border-radius: 3px;
-  background: #334155;
-  color: #94a3b8;
+  background: #475569;
+  color: #e2e8f0;
 }
 
 .grade-value {
   font-size: 0.8rem;
-  color: #94a3b8;
+  color: #e2e8f0;
 }
 
 .header-finding {
   font-size: 0.8rem;
-  color: #cbd5e1;
+  color: #e2e8f0;
   margin-bottom: 0.25rem;
   line-height: 1.4;
 }
 
 .header-rec {
   font-size: 0.75rem;
-  color: #64748b;
+  color: #e2e8f0;
   line-height: 1.3;
 }
 
@@ -494,7 +495,7 @@ body {
 
 .compliance-card {
   background: #1e293b;
-  border: 1px solid #334155;
+  border: 1px solid #475569;
   border-radius: 8px;
   padding: 0.75rem 1rem;
 }
@@ -535,25 +536,82 @@ body {
 
 .compliance-desc {
   font-size: 0.8rem;
-  color: #cbd5e1;
+  color: #e2e8f0;
   margin-bottom: 0.25rem;
   line-height: 1.4;
 }
 
 .compliance-rec {
   font-size: 0.75rem;
-  color: #64748b;
+  color: #e2e8f0;
   line-height: 1.3;
 }
 
 .related-headers {
   font-size: 0.75rem;
-  color: #64748b;
+  color: #e2e8f0;
   margin-top: 0.5rem;
   font-family: 'SF Mono', 'Fira Code', monospace;
 }
 
 /* Recommendations */
+.rec-fullwidth {
+  width: 100%;
+  padding: 2rem;
+}
+
+.rec-columns {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .rec-columns {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .rec-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rec-column {
+  background: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.rec-column-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 2px solid #475569;
+}
+
+.rec-column-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.rec-column-item {
+  font-size: 0.78rem;
+  color: #e2e8f0;
+  line-height: 1.4;
+  padding: 0.4rem;
+  background: #0f172a;
+  border-radius: 4px;
+}
+
 .recommendations-list {
   list-style: none;
   display: grid;
@@ -562,11 +620,11 @@ body {
 
 .recommendation-item {
   background: #1e293b;
-  border: 1px solid #334155;
+  border: 1px solid #475569;
   border-radius: 8px;
   padding: 0.75rem 1rem;
   font-size: 0.85rem;
-  color: #cbd5e1;
+  color: #e2e8f0;
   line-height: 1.4;
 }
 
@@ -585,13 +643,13 @@ body {
 
 .tls-card {
   background: #1e293b;
-  border: 1px solid #334155;
+  border: 1px solid #475569;
   border-radius: 8px;
   overflow: hidden;
 }
 
 .tls-card-header {
-  background: #334155;
+  background: #475569;
   padding: 0.5rem 0.75rem;
   font-size: 0.8rem;
   font-weight: 600;
@@ -618,7 +676,7 @@ body {
 }
 
 .tls-label {
-  color: #64748b;
+  color: #e2e8f0;
   font-size: 0.8rem;
   flex-shrink: 0;
 }
@@ -670,7 +728,7 @@ body {
 
 .dns-card {
   background: #1e293b;
-  border: 1px solid #334155;
+  border: 1px solid #475569;
   border-radius: 8px;
   padding: 0.75rem;
 }
@@ -704,7 +762,7 @@ body {
 .dns-status {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: #e2e8f0;
 }
 
 .dns-card.grade-good .dns-status {
@@ -721,7 +779,7 @@ body {
 
 .dns-value {
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: #e2e8f0;
   font-family: 'SF Mono', 'Fira Code', monospace;
   word-break: break-all;
   margin-bottom: 0.5rem;
@@ -734,14 +792,14 @@ body {
 
 .dns-finding {
   font-size: 0.8rem;
-  color: #cbd5e1;
+  color: #e2e8f0;
   margin-bottom: 0.25rem;
   line-height: 1.4;
 }
 
 .dns-rec {
   font-size: 0.75rem;
-  color: #64748b;
+  color: #e2e8f0;
   line-height: 1.3;
 }
 
@@ -750,7 +808,7 @@ body {
   text-align: center;
   margin-top: 3rem;
   padding-top: 1.5rem;
-  border-top: 1px solid #334155;
-  color: #64748b;
+  border-top: 1px solid #475569;
+  color: #e2e8f0;
   font-size: 0.8rem;
 }

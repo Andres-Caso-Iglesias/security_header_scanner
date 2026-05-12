@@ -540,16 +540,28 @@ function App() {
           </div>
 
           {result.recommendations.length > 0 && (
-            <section className="section">
+            <div className="rec-fullwidth">
               <h2>Recomendaciones</h2>
-              <ul className="recommendations-list">
-                {result.recommendations.map((rec, i) => (
-                  <li key={i} className="recommendation-item">
-                    {rec}
-                  </li>
-                ))}
-              </ul>
-            </section>
+              <div className="rec-columns">
+                  {(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((severity) => {
+                    const items = result.recommendations.filter((r) => r.startsWith(`[${severity}]`))
+                    if (items.length === 0) return null
+                    const sevColor = severity === 'CRITICAL' ? '#dc2626'
+                      : severity === 'HIGH' ? '#f97316'
+                      : severity === 'MEDIUM' ? '#eab308' : '#94a3b8'
+                    return (
+                      <div key={severity} className="rec-column">
+                        <h3 className="rec-column-title" style={{ color: sevColor }}>{severity}</h3>
+                        <ul className="rec-column-list">
+                          {items.map((rec, i) => (
+                            <li key={i} className="rec-column-item">{rec.replace(`[${severity}] `, '')}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )
+                  })}
+              </div>
+            </div>
           )}
         </div>
       )}
