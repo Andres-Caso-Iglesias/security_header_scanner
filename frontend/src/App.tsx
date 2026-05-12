@@ -316,66 +316,70 @@ function App() {
             </button>
           </div>
 
-          <section className="section">
-            <h2>Headers de Seguridad</h2>
-            <div className="header-grid">
-              {result.headers.map((h) => (
-                <div
-                  key={h.header}
-                  className={`header-card severity-${h.severity}`}
-                >
-                  <div className="header-card-top">
-                    <span className="header-name">{h.header}</span>
-                    <span
-                      className="header-grade"
-                      style={{ color: getSeverityColor(h.severity) }}
-                    >
-                      {h.grade === 1
-                        ? '✓'
-                        : h.grade > 0.5
-                          ? '⚠'
-                          : h.grade > 0
-                            ? '✗'
-                            : '✗'}
-                    </span>
-                  </div>
-                  <div className="header-grade-bar">
+          <div className="columns-layout">
+            <div className="column-main">
+              <section className="section">
+                <h2>Headers de Seguridad</h2>
+                <div className="header-grid">
+                  {result.headers.map((h) => (
                     <div
-                      className="grade-fill"
-                      style={{
-                        width: `${h.grade * 100}%`,
-                        backgroundColor: getSeverityColor(h.severity),
-                      }}
-                    />
-                  </div>
-                  <div className="header-card-info">
-                    <span className="severity-badge">{h.severity}</span>
-                    <span className="grade-value">
-                      {Math.round(h.grade * 100)}%
-                    </span>
-                  </div>
-                  <p className="header-finding">{h.finding}</p>
-                  <p className="header-rec">{h.recommendation}</p>
+                      key={h.header}
+                      className={`header-card severity-${h.severity}`}
+                    >
+                      <div className="header-card-top">
+                        <span className="header-name">{h.header}</span>
+                        <span
+                          className="header-grade"
+                          style={{ color: getSeverityColor(h.severity) }}
+                        >
+                          {h.grade === 1
+                            ? '✓'
+                            : h.grade > 0.5
+                              ? '⚠'
+                              : h.grade > 0
+                                ? '✗'
+                                : '✗'}
+                        </span>
+                      </div>
+                      <div className="header-grade-bar">
+                        <div
+                          className="grade-fill"
+                          style={{
+                            width: `${h.grade * 100}%`,
+                            backgroundColor: getSeverityColor(h.severity),
+                          }}
+                        />
+                      </div>
+                      <div className="header-card-info">
+                        <span className="severity-badge">{h.severity}</span>
+                        <span className="grade-value">
+                          {Math.round(h.grade * 100)}%
+                        </span>
+                      </div>
+                      <p className="header-finding">{h.finding}</p>
+                      <p className="header-rec">{h.recommendation}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </section>
             </div>
-          </section>
 
-          <section className="section">
-            <h2>Cumplimiento Normativo</h2>
-            {result.compliance.map((comp) => (
-              <div key={comp.framework} className="compliance-section">
-                <h3>
-                  {comp.framework} v{comp.version}
-                </h3>
-                <div className="compliance-grid">
-                  {comp.findings.map((f) => (
-                    <div
-                      key={f.control}
-                      className={`compliance-card status-${f.status}`}
-                    >
-                      <div className="compliance-card-header">
-                        <span className="compliance-control">
+            <div className="column-side">
+              <section className="section">
+                <h2>Cumplimiento Normativo</h2>
+                {result.compliance.map((comp) => (
+                  <div key={comp.framework} className="compliance-section">
+                    <h3>
+                      {comp.framework} v{comp.version}
+                    </h3>
+                    <div className="compliance-grid">
+                      {comp.findings.map((f) => (
+                        <div
+                          key={f.control}
+                          className={`compliance-card status-${f.status}`}
+                        >
+                          <div className="compliance-card-header">
+                            <span className="compliance-control">
                           {f.control}
                         </span>
                         <span
@@ -399,6 +403,8 @@ function App() {
               </div>
             ))}
           </section>
+            </div>
+          </div>
 
           <section className="section">
             <h2>TLS / SSL</h2>
