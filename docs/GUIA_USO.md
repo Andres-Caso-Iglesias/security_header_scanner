@@ -23,8 +23,9 @@ Guia practica para utilizar la herramienta de auditoria de seguridad web y enten
 3. Ingrese la URL completa incluyendo el protocolo (https://ejemplo.com)
 4. Presione Enter o haga clic en "Escanear"
 5. Espere unos segundos mientras se analizan los headers
-6. Revise el reporte generado con las secciones de headers, TLS, DNS, archivos de seguridad y recomendaciones
+6. Revise el reporte generado con las secciones de headers, TLS, DNS, archivos de seguridad, SRI, archivos sensibles, fingerprinting y recomendaciones
 7. Si el certificado SSL esta expirado o proximo a expirar, aparecera un aviso destacado en la parte superior del reporte
+8. Los textos largos (URLs de SRI, recomendaciones) se truncan con un click para expandir al contenido completo
 
 ### Via API (curl)
 
@@ -212,6 +213,44 @@ El archivo security.txt permite a los administradores publicar informacion de co
 - Con Contact y Expires = cumple el RFC 9116
 - Solo Contact = parcialmente conforme
 - Sin Contact = no cumple el estandar
+
+### SRI (Subresource Integrity)
+
+**Severidad:** medium
+**Proposito:** Garantizar que los recursos cargados desde CDNs o terceros no hayan sido modificados.
+
+El atributo `integrity` en etiquetas `<script>` y `<link rel="stylesheet">` permite al navegador verificar que el recurso no ha sido alterado mediante un hash criptografico.
+
+**Evaluacion:**
+- Todos los recursos externos tienen integrity = configuracion segura
+- Recursos sin integrity = riesgo de compromiso via CDN o terceros
+- Sin recursos externos = no aplica
+
+### Archivos Sensibles
+
+Escaneo pasivo de 40 rutas comunes que pueden exponer informacion critica:
+
+| Ruta | Riesgo |
+|------|--------|
+| `.env` | Credenciales de base de datos, API keys |
+| `.git/config` | Historial completo del repositorio |
+| `phpinfo.php` | Configuracion completa del servidor |
+| `web.config` / `.htaccess` | Configuracion del servidor web |
+| `wp-config.php` | Credenciales de WordPress |
+| `credentials.json` | Credenciales de servicios cloud |
+| `Dockerfile` | Configuracion de contenedores |
+| `backup/`, `logs/`, `private/` | Directorios con contenido sensible |
+
+### Fingerprinting de Tecnologias
+
+Identifica el stack tecnologico del sitio: CMS, framework, servidor, runtime y CDN. Cuando se detecta una version concreta, se consulta una base de datos interna de 20 CVEs conocidos para alertar sobre vulnerabilidades publicas.
+
+**Tecnologias detectables:** WordPress, Joomla, Drupal, PHP, Express, ASP.NET, Laravel, Django, Nginx, Apache, Cloudflare, jQuery, Bootstrap, Google Analytics.
+
+**Interpretacion de confianza:**
+- **high**: detectado por meta generator, header explicito o patron inequivoco
+- **medium**: detectado por patron de rutas o referencias
+- **low**: detectado por referencia indirecta
 
 ### /robots.txt
 

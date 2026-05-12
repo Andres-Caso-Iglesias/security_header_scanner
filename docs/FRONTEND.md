@@ -115,20 +115,23 @@ Banner prominente debajo del resumen del scan que aparece cuando el certificado 
 - Ha expirado: fondo rojo con mensaje "CERTIFICADO EXPIRADO"
 - Expira en menos de 30 dias: fondo naranja con cuenta regresiva
 
-### Security Files Section
+### Fila 1: Security Files + Sensitive Files
 
-Dos tarjetas en grilla de 2 columnas:
-- `/.well-known/security.txt`: Muestra si existe, su contenido y analisis de campos RFC 9116
-- `/robots.txt`: Muestra si existe, su contenido y deteccion de rutas sensibles
+**Security Files:** Dos tarjetas en columna (`security.txt` RFC 9116 y `robots.txt`) con estado encontrado/ausente, contenido y recomendaciones.
 
-### DNS Section
+**Sensitive Files:** Advertencia de archivos sensibles expuestos con lista de rutas y codigos de estado HTTP.
 
-Tres tarjetas en columna (dentro de una fila 50/50 junto a TLS):
-- SPF: Registro TXT del dominio, analiza mecanismo all e include
-- DKIM: Registro TXT en `{selector}._domainkey.{domain}` con clave publica
-- DMARC: Registro TXT en `_dmarc.{domain}` con politica y reporting
+Fila 50/50, emparejada con Archivos de Seguridad.
+
+### Fila 2: SRI + Fingerprinting
+
+**SRI:** Total de recursos externos, cuantos tienen atributo `integrity`, y listado de los que no (URLs truncadas, expandibles al hacer click).
+
+**Fingerprinting:** Tecnologias detectadas con nombre, version, confianza y evidencias. Tarjetas de CVE con ID, severidad y descripcion.
 
 ### RecommendationsList
+
+4 columnas (CRITICAL, HIGH, MEDIUM, LOW) que ocupan todo el ancho de la pantalla. Cada item se trunca a una linea con ellipsis y se expande al hacer click para ver el texto completo.
 
 Lista de recomendaciones ordenadas por severidad, cada una con formato `[SEVERIDAD] texto`.
 
@@ -162,15 +165,18 @@ La seccion de resultados utiliza un layout de ancho completo:
 |  |  Headers de Seguridad      | Cumplimiento Normativo     | |
 |  |  3 tarjetas por fila       | OWASP + NIS2              | |
 |  +----------------------------+----------------------------+ |
-|  |  Security Files (1/2)      | Security Files (1/2)       | |
-|  |  security.txt              | robots.txt                 | |
-|  +----------------------------+----------------------------+ |
 |  |  TLS / SSL (col-half)      | DNS / Email (col-half)    | |
 |  |  Conexion + Certificado    | SPF + DKIM + DMARC        | |
 |  +----------------------------+----------------------------+ |
+|  |  Security Files (col-half)  | Sensitive Files (col-half)| |
+|  |  security.txt + robots.txt  | .env, .git, config, etc.  | |
+|  +----------------------------+----------------------------+ |
+|  |  SRI (col-half)             | Fingerprinting (col-half) | |
+|  |  Recursos con/sin integrity | CMS, CVEs, tecnologias    | |
+|  +----------------------------+----------------------------+ |
 |                                                             |
 |  +--------------------------------------------------------+ |
-|  |  Recomendaciones (full-width, 4 columnas)                | |
+|  |  Recomendaciones (full-width, 4 columnas truncables)    | |
 |  |  CRITICAL | HIGH | MEDIUM | LOW                         | |
 |  +--------------------------------------------------------+ |
 +------------------------------------------------------------+

@@ -642,115 +642,127 @@ function App() {
             </div>
           </div>
 
-          <section className="section">
-            <h2>Archivos de Seguridad</h2>
-            <div className="security-files-grid">
-              {[result.securityFiles.securityTxt, result.securityFiles.robotsTxt].map((file) => (
-                <div key={file.path} className={`security-card ${file.present ? 'found' : 'missing'}`}>
-                  <div className="security-card-header">
-                    <span className="security-path">{file.path}</span>
-                    <span className={`security-status ${file.present ? 'status-ok' : 'status-missing'}`}>
-                      {file.present ? 'Encontrado' : 'No encontrado'}
-                    </span>
-                  </div>
-                  {file.content && (
-                    <pre className="security-content">{file.content}</pre>
-                  )}
-                  <p className="security-finding">{file.finding}</p>
-                  {file.grade < 1.0 && (
-                    <p className="security-rec">{file.recommendation}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="section">
-            <h2>Subresource Integrity (SRI)</h2>
-            {result.sri.totalResources === 0 ? (
-              <p className="no-data">No se detectaron recursos externos (scripts o estilos) en la pagina.</p>
-            ) : (
-              <div className="sri-summary">
-                <div className={`sri-grade ${result.sri.grade >= 1 ? 'good' : result.sri.grade >= 0.5 ? 'warn' : 'bad'}`}>
-                  <span className="sri-stat">{result.sri.secureResources}/{result.sri.totalResources}</span>
-                  <span className="sri-label">recursos con SRI</span>
-                </div>
-                <p className="sri-finding">{result.sri.finding}</p>
-                {result.sri.insecureResources.length > 0 && (
-                  <>
-                    <p className="sri-rec">{result.sri.recommendation}</p>
-                    <div className="sri-list">
-                      {result.sri.insecureResources.map((r, i) => (
-                        <div key={i} className="sri-item">
-                          <span className="sri-tag">{r.tag}</span>
-                          <span className={`sri-src ${!expandedSri.has(i) ? 'truncated' : ''}`} onClick={() => toggleSri(i)}>
-                            {r.src}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </section>
-
-          <section className="section">
-            <h2>Archivos Sensibles</h2>
-            {result.sensitiveFiles.exposedCount === 0 ? (
-              <p className="no-data">No se detectaron archivos sensibles expuestos.</p>
-            ) : (
-              <div>
-                <div className="sens-warning">
-                  <strong>{result.sensitiveFiles.exposedCount} archivo(s) sensible(s) expuesto(s)</strong>
-                </div>
-                <div className="sens-list">
-                  {result.sensitiveFiles.files.filter((f) => f.exposed).map((f, i) => (
-                    <div key={i} className="sens-item">
-                      <span className="sens-path">{f.path}</span>
-                      <span className="sens-finding">{f.finding}</span>
+          <div className="row-half">
+            <div className="col-half">
+              <section className="section">
+                <h2>Archivos de Seguridad</h2>
+                <div className="security-files-grid">
+                  {[result.securityFiles.securityTxt, result.securityFiles.robotsTxt].map((file) => (
+                    <div key={file.path} className={`security-card ${file.present ? 'found' : 'missing'}`}>
+                      <div className="security-card-header">
+                        <span className="security-path">{file.path}</span>
+                        <span className={`security-status ${file.present ? 'status-ok' : 'status-missing'}`}>
+                          {file.present ? 'Encontrado' : 'No encontrado'}
+                        </span>
+                      </div>
+                      {file.content && (
+                        <pre className="security-content">{file.content}</pre>
+                      )}
+                      <p className="security-finding">{file.finding}</p>
+                      {file.grade < 1.0 && (
+                        <p className="security-rec">{file.recommendation}</p>
+                      )}
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-          </section>
+              </section>
+            </div>
 
-          <section className="section">
-            <h2>Huella Digital (Fingerprinting)</h2>
-            <p className="fp-summary">{result.fingerprint.summary}</p>
-            {result.fingerprint.technologies.length > 0 && (
-              <div className="fp-grid">
-                {result.fingerprint.technologies.map((tech, i) => (
-                  <div key={i} className="fp-card">
-                    <div className="fp-card-top">
-                      <span className="fp-name">{tech.name}</span>
-                      {tech.version && <span className="fp-version">{tech.version}</span>}
-                      <span className={`fp-confidence ${tech.confidence}`}>{tech.confidence}</span>
+            <div className="col-half">
+              <section className="section">
+                <h2>Archivos Sensibles</h2>
+                {result.sensitiveFiles.exposedCount === 0 ? (
+                  <p className="no-data">No se detectaron archivos sensibles expuestos.</p>
+                ) : (
+                  <div>
+                    <div className="sens-warning">
+                      <strong>{result.sensitiveFiles.exposedCount} archivo(s) sensible(s) expuesto(s)</strong>
                     </div>
-                    <span className="fp-category">{tech.category}</span>
-                    {tech.evidence.map((e, j) => (
-                      <div key={j} className="fp-evidence">{e}</div>
+                    <div className="sens-list">
+                      {result.sensitiveFiles.files.filter((f) => f.exposed).map((f, i) => (
+                        <div key={i} className="sens-item">
+                          <span className="sens-path">{f.path}</span>
+                          <span className="sens-finding">{f.finding}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+            </div>
+          </div>
+
+          <div className="row-half">
+            <div className="col-half">
+              <section className="section">
+                <h2>Subresource Integrity (SRI)</h2>
+                {result.sri.totalResources === 0 ? (
+                  <p className="no-data">No se detectaron recursos externos (scripts o estilos) en la pagina.</p>
+                ) : (
+                  <div className="sri-summary">
+                    <div className={`sri-grade ${result.sri.grade >= 1 ? 'good' : result.sri.grade >= 0.5 ? 'warn' : 'bad'}`}>
+                      <span className="sri-stat">{result.sri.secureResources}/{result.sri.totalResources}</span>
+                      <span className="sri-label">recursos con SRI</span>
+                    </div>
+                    <p className="sri-finding">{result.sri.finding}</p>
+                    {result.sri.insecureResources.length > 0 && (
+                      <>
+                        <p className="sri-rec">{result.sri.recommendation}</p>
+                        <div className="sri-list">
+                          {result.sri.insecureResources.map((r, i) => (
+                            <div key={i} className="sri-item">
+                              <span className="sri-tag">{r.tag}</span>
+                              <span className={`sri-src ${!expandedSri.has(i) ? 'truncated' : ''}`} onClick={() => toggleSri(i)}>
+                                {r.src}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </section>
+            </div>
+
+            <div className="col-half">
+              <section className="section">
+                <h2>Huella Digital (Fingerprinting)</h2>
+                <p className="fp-summary">{result.fingerprint.summary}</p>
+                {result.fingerprint.technologies.length > 0 && (
+                  <div className="fp-grid">
+                    {result.fingerprint.technologies.map((tech, i) => (
+                      <div key={i} className="fp-card">
+                        <div className="fp-card-top">
+                          <span className="fp-name">{tech.name}</span>
+                          {tech.version && <span className="fp-version">{tech.version}</span>}
+                          <span className={`fp-confidence ${tech.confidence}`}>{tech.confidence}</span>
+                        </div>
+                        <span className="fp-category">{tech.category}</span>
+                        {tech.evidence.map((e, j) => (
+                          <div key={j} className="fp-evidence">{e}</div>
+                        ))}
+                      </div>
                     ))}
                   </div>
-                ))}
-              </div>
-            )}
-            {result.fingerprint.cves.length > 0 && (
-              <div className="cve-section">
-                <h3>CVEs Detectados ({result.fingerprint.cves.length})</h3>
-                {result.fingerprint.cves.map((cve, i) => (
-                  <div key={i} className={`cve-card severity-${cve.severity}`}>
-                    <div className="cve-top">
-                      <span className="cve-id">{cve.id}</span>
-                      <span className={`cve-severity ${cve.severity}`}>{cve.severity}</span>
-                    </div>
-                    <p className="cve-desc">{cve.description}</p>
+                )}
+                {result.fingerprint.cves.length > 0 && (
+                  <div className="cve-section">
+                    <h3>CVEs Detectados ({result.fingerprint.cves.length})</h3>
+                    {result.fingerprint.cves.map((cve, i) => (
+                      <div key={i} className={`cve-card severity-${cve.severity}`}>
+                        <div className="cve-top">
+                          <span className="cve-id">{cve.id}</span>
+                          <span className={`cve-severity ${cve.severity}`}>{cve.severity}</span>
+                        </div>
+                        <p className="cve-desc">{cve.description}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </section>
+                )}
+              </section>
+            </div>
+          </div>
 
           {result.recommendations.length > 0 && (
             <div className="rec-fullwidth">

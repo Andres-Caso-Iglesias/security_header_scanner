@@ -139,6 +139,74 @@ async scan(url: string): Promise<ScanResult> {
 }
 ```
 
+### TechFingerprinterService
+
+Servicio de fingerprinting que identifica tecnologias del servidor, CMS, frameworks y runtimes, y las contrasta con una base de datos de CVEs conocidos.
+
+**Ubicacion:** `src/scanner/fingerprint/tech-fingerprinter.service.ts`
+
+**Firmas de deteccion (13 tecnologias):**
+
+| Tecnologia | Categoria | Metodo de deteccion |
+|------------|-----------|---------------------|
+| WordPress | CMS | Meta generator, wp-content paths, wp-json REST API |
+| Joomla | CMS | Meta generator, component/module paths |
+| Drupal | CMS | Meta generator, sites/default paths |
+| PHP | Runtime | X-Powered-By header |
+| Express | Framework | X-Powered-By header |
+| ASP.NET | Framework | X-AspNet-Version header, cookies |
+| Laravel | Framework | X-Powered-By header |
+| Django | Framework | X-Powered-By, WSGI server |
+| Nginx | Server | Server header |
+| Apache | Server | Server header |
+| Cloudflare | CDN | cf-ray, cf-cache-status headers |
+| jQuery | Libreria | Script src references en HTML |
+| Bootstrap | Framework | Stylesheet references en HTML |
+
+**Base de datos de CVEs:** 20 CVEs conocidos para WordPress, Joomla, Drupal, PHP, Apache y Nginx, mapeados por rango de version semantica.
+
+**Flujo:**
+1. Toma los headers HTTP ya obtenidos por el HttpClientService
+2. Fetch del HTML de la URL (best-effort, tolera fallos)
+3. Ejecuta las 13 firmas de deteccion
+4. Desduplica tecnologias por nombre (prioriza mayor confianza)
+5. Contrasta versiones detectadas contra la base de datos de CVEs
+6. Calcula grade: 1.0 sin CVEs, 0.2 si hay CVEs critical, 0.4 si high, 0.6 si medium
+
+### SriCheckerService
+
+Servicio que analiza el HTML de la pagina objetivo en busca de recursos externos y verifica que tengan atributo `integrity` (SRI - Subresource Integrity).
+
+**Ubicacion:** `src/scanner/content/sri-checker.service.ts`
+
+**Que analiza:**
+- Etiquetas `<script src="...">` con y sin integridad
+- Etiquetas `<link rel="stylesheet" href="...">` con y sin integridad
+- Parseo con expresiones regulares sobre el HTML
+
+**Grade:** Proporcion de recursos seguros vs totales. 1.0 si todos tienen integrity, 0 si ninguno.
+
+### SensitiveFileCheckerService
+
+Servicio que escanea rutas de archivos sensibles en el servidor objetivo para detectar exposiciones accidentales.
+
+**Ubicacion:** `src/scanner/files/sensitive-file-checker.service.ts`
+
+**Rutas escaneadas (40 paths):**
+
+```
+/.env, /.git/config, /phpinfo.php, /web.config, /.htaccess,
+/wp-admin/, /wp-config.php, /admin/, /backup/, /config.php,
+/crossdomain.xml, /Dockerfile, /docker-compose.yml, /credentials.json,
+/.aws/credentials, /.npmrc, /.ssh/, /composer.json, /package.json,
+/database.yml, /debug.log, /error.log, /install/, /logs/, /private/,
+/server-status, /test.php, /Makefile, /robots.txt, /sitemap.xml
+```
+
+**Metodo:** HEAD requests en batches de 5 en paralelo con timeout de 4s. HTTP 200/204 = expuesto. 403/401 = existe pero bloqueado.
+
+**Grade:** 1.0 si no hay expuestos, 0.7 si <=3, 0.4 si <=8, 0.1 si mas.
+
 ### SecurityFileCheckerService
 
 Servicio que verifica la existencia y contenido de archivos de seguridad estandar en el servidor web.
