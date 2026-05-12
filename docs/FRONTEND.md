@@ -7,6 +7,8 @@ Documentacion tecnica del frontend de la herramienta de auditoria de seguridad w
 - [Stack](#stack)
 - [Estructura](#estructura)
 - [Componentes](#componentes)
+- [Layout de Resultados](#layout-de-resultados)
+- [Exportacion de Reportes](#exportacion-de-reportes)
 - [Proxy y Comunicacion con Backend](#proxy-y-comunicacion-con-backend)
 - [Estados de la UI](#estados-de-la-ui)
 - [Build y Deploy](#build-y-deploy)
@@ -59,28 +61,27 @@ Componente que renderiza un grafico circular SVG con:
 Colores por grado:
 ```typescript
 const gradeColors = {
-  A: '#22c55e',  // verde
-  B: '#84cc16',  // verde claro
-  C: '#eab308',  // amarillo
-  D: '#f97316',  // naranja
-  E: '#ef4444',  // rojo
-  F: '#dc2626',  // rojo oscuro
+  A: '#22c55e',
+  B: '#84cc16',
+  C: '#eab308',
+  D: '#f97316',
+  E: '#ef4444',
+  F: '#dc2626',
 }
 ```
 
 ### ScoreHeader
 
-Barra superior con:
+Barra superior centrada con:
 - ScoreCircle (izquierda)
-- Metadatos del scan en grilla 2x2: URL, status code, tiempo de respuesta, headers analizados, recomendaciones
-- Boton "Copiar Reporte" (copia el JSON completo al portapapeles con feedback visual)
+- Metadatos del scan en grilla 2x2: URL, status code, tiempo de respuesta, headers analizados, TLS, recomendaciones
+- Contenido con max-width de 960px y centrado
 
 ### HeaderGrid
 
-Grilla responsiva de tarjetas (auto-fill, min 280px cada una). Cada tarjeta contiene:
-
+Grilla de 3 columnas (2 en mobile) con tarjetas de headers. Cada tarjeta contiene:
 - Nombre del header (monospace)
-- Icono de estado (check/advertencia/equis) coloreado por severidad
+- Icono de estado (OK/Regular/AUSENTE) coloreado por severidad
 - Barra de progreso horizontal animada (0-100%)
 - Badge de severidad (critical/high/medium/low)
 - Valor numerico del grade
@@ -95,17 +96,77 @@ Las tarjetas tienen un borde izquierdo de 3px coloreado por severidad:
 
 ### ComplianceSection
 
-Dos secciones (OWASP Top 10 + NIS2) con tarjetas de cumplimiento. Cada tarjeta incluye:
-
+Aparece en la columna derecha (1/3 del ancho) junto a los headers. Incluye:
 - Nombre del control
 - Status coloreado (compliant=verde, partially_compliant=amarillo, non_compliant=rojo, not_applicable=gris)
 - Descripcion del hallazgo
 - Recomendacion
 - Headers relacionados (si aplica)
 
+### TLS Section
+
+Dos tarjetas en grilla de 2 columnas:
+- Conexion: version TLS, host, puerto, grade
+- Certificado: sujeto, emisor, validez, self-signed, wildcard, SAN
+
 ### RecommendationsList
 
 Lista de recomendaciones ordenadas por severidad, cada una con formato `[SEVERIDAD] texto`.
+
+### ExportButtons
+
+Barra de botones centrada debajo del ScoreHeader:
+- Copiar JSON: copia el reporte al portapapeles
+- Descargar JSON: descarga el reporte como archivo .json
+- Descargar PDF: genera y descarga un documento PDF profesional
+
+## Layout de Resultados
+
+La seccion de resultados utiliza un layout de ancho completo:
+
+```
++------------------------------------------------------------+
+|  .results (width: 100vw, centrado con calc(-50vw + 50%))   |
+|                                                             |
+|  +---------------------------+----------------------------+ |
+|  |  .result-header           |  (max-width: 960px, cent.) | |
+|  |  [ScoreCircle] [Meta]     |                            | |
+|  +---------------------------+----------------------------+ |
+|                                                             |
+|  +---------------------------+----------------------------+ |
+|  |  .export-buttons          |  (max-width: 960px, cent.) | |
+|  |  [Copiar] [JSON] [PDF]    |                            | |
+|  +---------------------------+----------------------------+ |
+|                                                             |
+|  +----------------------------+----------------------------+ |
+|  |  .column-main (flex: 2)    | .column-side (flex: 1)     | |
+|  |  Headers de Seguridad      | Cumplimiento Normativo     | |
+|  |  3 tarjetas por fila       | OWASP + NIS2              | |
+|  +----------------------------+----------------------------+ |
+|                                                             |
+|  +--------------------------------------------------------+ |
+|  |  TLS / SSL (max-width: 960px, centrado)                 | |
+|  +--------------------------------------------------------+ |
+|                                                             |
+|  +--------------------------------------------------------+ |
+|  |  Recomendaciones (max-width: 960px, centrado)           | |
+|  +--------------------------------------------------------+ |
++------------------------------------------------------------+
+```
+
+En mobile (<768px), las columnas de headers y compliance se apilan verticalmente, y la grilla de headers pasa a 2 columnas.
+
+## Exportacion de Reportes
+
+El frontend provee 3 mecanismos de exportacion:
+
+| Boton | Formato | Metodo |
+|-------|---------|--------|
+| Copiar JSON | text/plain | navigator.clipboard.writeText() |
+| Descargar JSON | .json file | fetch + Blob + download link |
+| Descargar PDF | .pdf file | fetch + Blob + download link |
+
+Todos llaman al endpoint `POST /api/export` con el formato correspondiente.
 
 ## Proxy y Comunicacion con Backend
 
@@ -136,7 +197,7 @@ const res = await fetch('/api/scan', {
 });
 ```
 
-De esta forma no hay problemas de CORS durante el desarrollo.
+De esta forma no hay problemas de CORS durante el desarrollo. El proxy tambien funciona para el endpoint `/api/export`.
 
 ## Estados de la UI
 
@@ -155,9 +216,11 @@ La aplicacion maneja 4 estados visuales:
 ### Estado de exito
 - Animacion fade-in del reporte
 - ScoreCircle con el resultado
-- HeaderGrid con los 15 headers
-- Compliance sections
+- HeaderGrid con los 15 headers (3 por fila)
+- Columns layout: headers (2/3) + compliance (1/3)
+- TLS section con certificado
 - Recommendations list
+- Botones de exportacion
 
 ### Estado de error
 - Banner rojo con mensaje de error

@@ -40,6 +40,32 @@ curl -X POST http://localhost:3000/api/scan \
 3. Haga clic en "Try it out"
 4. Ingrese la URL y ejecute
 
+### Exportar Reporte PDF
+
+```bash
+curl -X POST http://localhost:3000/api/export \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://ejemplo.com","format":"pdf"}' \
+  --output reporte-auditoria.pdf
+```
+
+### Exportar Reporte JSON
+
+```bash
+curl -X POST http://localhost:3000/api/export \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://ejemplo.com","format":"json"}' \
+  --output reporte-auditoria.json
+```
+
+### Via Interfaz Web - Exportacion
+
+Una vez generado el reporte, aparecen tres botones debajo del resumen:
+
+- **Copiar JSON**: copia el reporte completo al portapapeles
+- **Descargar JSON**: descarga el reporte como archivo .json
+- **Descargar PDF**: genera un documento PDF profesional listo para usar como evidencia tecnica
+
 ## Interpretacion del Reporte
 
 ### Score General y Grado

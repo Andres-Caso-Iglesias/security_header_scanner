@@ -78,14 +78,28 @@ npm run dev     # Puerto 5173 con proxy a :3000
 La aplicacion queda accesible en:
 - Frontend: http://localhost:5173
 - API: http://localhost:3000/api/scan
+- Exportacion: http://localhost:3000/api/export
 - Documentacion Swagger: http://localhost:3000/api/docs
 
 ### Uso con curl (sin frontend)
 
 ```bash
+# Escanear y ver resultado en JSON
 curl -X POST http://localhost:3000/api/scan \
   -H "Content-Type: application/json" \
   -d '{"url":"https://example.com"}'
+
+# Exportar reporte PDF
+curl -X POST http://localhost:3000/api/export \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com","format":"pdf"}' \
+  --output reporte.pdf
+
+# Exportar reporte JSON
+curl -X POST http://localhost:3000/api/export \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com","format":"json"}' \
+  --output reporte.json
 ```
 
 ## Estructura del Proyecto
@@ -100,7 +114,9 @@ auditoria-web/
 │   │   └── tls/                  #   Verificacion TLS/SSL
 │   ├── analyzer/                 # Score calculator + 15 header checkers
 │   ├── compliance/               # Mappers OWASP Top 10 + NIS2
-│   └── report/                   # Generacion de reportes JSON
+│   └── report/
+│       ├── export/               # Export PDF/JSON service
+│       └── ...                   # Generacion de reportes
 ├── test/                         # Tests unitarios y e2e
 │   ├── unit/                     # 19 suites de tests (83 tests)
 │   └── e2e/                      # Tests de integracion
@@ -128,7 +144,7 @@ auditoria-web/
 ## Testing
 
 ```bash
-# Tests unitarios (83 tests)
+# Tests unitarios (83 tests, 19 suites)
 npm test
 
 # Tests e2e
