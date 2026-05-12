@@ -139,6 +139,46 @@ async scan(url: string): Promise<ScanResult> {
 }
 ```
 
+### DnsCheckerService
+
+Servicio que realiza verificaciones de seguridad DNS: SPF, DKIM y DMARC. Se ejecuta en paralelo con HTTP y TLS via `Promise.all`.
+
+**Ubicacion:** `src/scanner/dns/dns-checker.service.ts`
+
+**Tecnologia:** Modulo nativo `dns/promises` de Node.js (resolucion TXT records)
+
+**Registros verificados:**
+
+| Registro | Consulta DNS | Que evalua |
+|----------|-------------|------------|
+| SPF | `TXT {domain}` buscando `v=spf1` | Mecanismo de fail (`-all` = hard, `~all` = soft, `?all` = none), presencia de `include:` |
+| DKIM | `TXT {selector}._domainkey.{domain}` (prueba 6 selectores) | `v=DKIM1`, presencia de clave publica `p=` |
+| DMARC | `TXT _dmarc.{domain}` buscando `v=DMARC1` | Politica (`p=reject`, `p=quarantine`, `p=none`), reporting (`rua`), cobertura (`pct`) |
+
+**Timeout:** 5 segundos por consulta DNS via `AbortController`.
+
+**Grading DNS:**
+```
+SPF:   -all + include   = 1.0
+       ~all             = 0.7
+       presente sin all = 0.4
+       ?all / +all      = 0.2
+       ausente          = 0.0
+
+DKIM:  v=DKIM1 con p=   = 1.0
+       presente sin p=  = 0.5
+       ausente          = 0.0
+
+DMARC: p=reject + rua   = 1.0
+       p=reject         = 0.9
+       p=quarantine+rua = 0.8
+       p=quarantine     = 0.7
+       p=none           = 0.3
+       ausente          = 0.0
+
+Grade total DNS = (SPF.grade + DKIM.grade + DMARC.grade) / 3
+```
+
 ### TlsCheckerService
 
 Servicio independiente que realiza una conexion TLS raw con el servidor destino para extraer informacion del protocolo y certificado.

@@ -105,9 +105,16 @@ Aparece en la columna derecha (1/3 del ancho) junto a los headers. Incluye:
 
 ### TLS Section
 
-Dos tarjetas en grilla de 2 columnas:
+Dos tarjetas en grilla de 2 columnas (dentro de una fila 50/50 junto a DNS):
 - Conexion: version TLS, host, puerto, grade
 - Certificado: sujeto, emisor, validez, self-signed, wildcard, SAN
+
+### DNS Section
+
+Tres tarjetas en columna (dentro de una fila 50/50 junto a TLS):
+- SPF: Registro TXT del dominio, analiza mecanismo all e include
+- DKIM: Registro TXT en `{selector}._domainkey.{domain}` con clave publica
+- DMARC: Registro TXT en `_dmarc.{domain}` con politica y reporting
 
 ### RecommendationsList
 
@@ -144,9 +151,10 @@ La seccion de resultados utiliza un layout de ancho completo:
 |  |  3 tarjetas por fila       | OWASP + NIS2              | |
 |  +----------------------------+----------------------------+ |
 |                                                             |
-|  +--------------------------------------------------------+ |
-|  |  TLS / SSL (max-width: 960px, centrado)                 | |
-|  +--------------------------------------------------------+ |
+|  +----------------------------+----------------------------+ |
+|  |  TLS / SSL (col-half)      | DNS / Email (col-half)    | |
+|  |  Conexion + Certificado    | SPF + DKIM + DMARC        | |
+|  +----------------------------+----------------------------+ |
 |                                                             |
 |  +--------------------------------------------------------+ |
 |  |  Recomendaciones (max-width: 960px, centrado)           | |

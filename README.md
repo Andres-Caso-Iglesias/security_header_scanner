@@ -110,8 +110,9 @@ auditoria-web/
 │   ├── main.ts                   # Bootstrap + Swagger
 │   ├── app.module.ts             # Modulo raiz
 │   ├── common/                   # Interfaces, constantes, filtros, pipes
-│   ├── scanner/                  # Controller, DTOs, HTTP client, TLS checker
-│   │   └── tls/                  #   Verificacion TLS/SSL
+│   ├── scanner/                  # Controller, DTOs, HTTP client, TLS, DNS
+│   │   ├── tls/                  #   Verificacion TLS/SSL
+│   │   └── dns/                  #   Verificacion DNS (SPF/DKIM/DMARC)
 │   ├── analyzer/                 # Score calculator + 15 header checkers
 │   ├── compliance/               # Mappers OWASP Top 10 + NIS2
 │   └── report/
@@ -240,6 +241,30 @@ Escanea una URL y devuelve un reporte de seguridad.
       "fingerprint": "AA:BB:CC:DD:EE:FF:00:11...",
       "serialNumber": "1234567890",
       "san": ["example.com"]
+    },
+    "grade": 1.0
+  },
+  "dns": {
+    "hostname": "example.com",
+    "checked": true,
+    "error": null,
+    "spf": {
+      "type": "SPF", "value": "v=spf1 include:_spf.google.com -all",
+      "present": true, "grade": 1.0,
+      "finding": "SPF record with hard fail and authorised senders",
+      "recommendation": "SPF is properly configured"
+    },
+    "dkim": {
+      "type": "DKIM", "value": "v=DKIM1; p=...",
+      "present": true, "grade": 1.0,
+      "finding": "DKIM record found with public key",
+      "recommendation": "DKIM is properly configured"
+    },
+    "dmarc": {
+      "type": "DMARC", "value": "v=DMARC1; p=reject; rua=mailto:dmarc@...",
+      "present": true, "grade": 1.0,
+      "finding": "DMARC with p=reject and reporting",
+      "recommendation": "DMARC is properly configured"
     },
     "grade": 1.0
   },

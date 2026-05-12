@@ -115,7 +115,7 @@ El reporte incluye dos secciones de compliance:
 | Control | Evalua | Que significa |
 |---------|--------|---------------|
 | A01 - Broken Access Control | CORS, cookies | Evalua si hay controles de acceso debiles que permitan acceso no autorizado |
-| A05 - Security Misconfiguration | Headers de seguridad, TLS/SSL | Evalua si faltan headers de seguridad esenciales, TLS desactualizado, certificados expirados o autofirmados |
+| A05 - Security Misconfiguration | Headers de seguridad, TLS/SSL, SPF/DKIM/DMARC | Evalua si faltan headers de seguridad esenciales, TLS desactualizado, certificados expirados, registros DNS de correo ausentes o debiles |
 | A06 - Vulnerable Components | X-Powered-By, Server | Evalua si el sitio expone informacion sobre tecnologias que podrian tener vulnerabilidades conocidas |
 
 #### NIS2 Directive (2023) - Articulo 21
@@ -150,7 +150,9 @@ Se recomienda abordar las recomendaciones en orden de severidad: critical primer
 
 ### TLS / SSL
 
-La herramienta realiza una conexion TLS real con el servidor destino para verificar el estado del certificado y la version del protocolo. Esta informacion se muestra en la seccion TLS/SSL del reporte.
+La herramienta realiza una conexion TLS real con el servidor destino para verificar el estado del certificado y la version del protocolo. Esta informacion se muestra en la seccion TLS/SSL del reporte, en la misma fila que los resultados DNS.
+
+Adicionalmente, se consultan los registros DNS de seguridad del correo electronico (SPF, DKIM, DMARC) para evaluar la proteccion contra suplantacion de dominio. Estos resultados se muestran en la seccion DNS / Email Security.
 
 **Datos que se verifican:**
 
@@ -189,6 +191,46 @@ Wildcard: true           -> funcional pero riesgo mayor
 Expires in: 97 dias      -> renovacion no urgente
 Grade: 0.75 (75%)        -> aceptable, mejorable
 ```
+
+### SPF (Sender Policy Framework)
+
+**Severidad:** medium
+**Protege contra:** Email spoofing, suplantacion del dominio
+
+SPF permite a los administradores especificar que servidores estan autorizados a enviar correo desde el dominio. Se publica como un registro TXT en el DNS.
+
+**Valor esperado:** `v=spf1 include:_spf.google.com -all`
+
+**Evaluacion:**
+- `-all` (hard fail): solo los servidores autorizados pueden enviar, el resto es rechazado
+- `~all` (soft fail): los servidores no autorizados son marcados pero aceptados (monitoreo)
+- `?all` (neutral): no se toma accion
+- `+all` (pass): cualquier servidor puede enviar (inseguro)
+
+### DKIM (DomainKeys Identified Mail)
+
+**Severidad:** medium
+**Protege contra:** Manipulacion de correo electronico
+
+DKIM permite firmar digitalmente los correos para verificar que no fueron alterados en el transito. La clave publica se publica en el DNS como `{selector}._domainkey.{dominio}`.
+
+**Valor esperado:** `v=DKIM1; k=rsa; p=<clave-publica>`
+
+**Nota:** La herramienta prueba 6 selectores comunes (default, google, selector1, selector2, dkim, mail). Algunos proveedores usan selectores personalizados que pueden no detectarse.
+
+### DMARC (Domain-based Message Authentication, Reporting & Conformance)
+
+**Severidad:** medium
+**Protege contra:** Email spoofing, phishing
+
+DMARC indica a los servidores de correo como manejar los mensajes que fallan las verificaciones SPF y DKIM. Se publica como `_dmarc.{dominio}`.
+
+**Valor esperado:** `v=DMARC1; p=reject; rua=mailto:dmarc@tudominio.com`
+
+**Politicas:**
+- `p=reject`: Rechazar correos que no pasen validacion (maxima proteccion)
+- `p=quarantine`: Marcar como spam los correos que no pasen validacion
+- `p=none`: No tomar accion, solo monitorear
 
 ### Content-Security-Policy (CSP)
 **Severidad: critical**
