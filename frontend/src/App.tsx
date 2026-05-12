@@ -248,7 +248,9 @@ function App() {
       </header>
 
       <div className="scan-form">
+        <label htmlFor="url-input" className="sr-only">URL a escanear</label>
         <input
+          id="url-input"
           type="text"
           className="url-input"
           placeholder="https://ejemplo.com"

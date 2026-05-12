@@ -23,7 +23,7 @@ let ExportService = class ExportService {
                         Title: `Auditoria de Seguridad Web - ${result.url}`,
                         Author: 'Auditoria Web Scanner',
                         Subject: 'Reporte de Auditoria de Headers de Seguridad',
-                        Keywords: 'seguridad, auditoria, headers, OWASP, NIS2, TLS',
+                        Keywords: 'seguridad, auditoria, headers, OWASP, NIS2, TLS, DNS',
                     },
                 });
                 const chunks = [];
@@ -36,7 +36,6 @@ let ExportService = class ExportService {
                 const midGray = '#666666';
                 const lightGray = '#999999';
                 const borderColor = '#cccccc';
-                const headerBg = '#f2f2f2';
                 const white = '#ffffff';
                 const accentRed = '#b91c1c';
                 const accentOrange = '#c2410c';
@@ -50,17 +49,14 @@ let ExportService = class ExportService {
                     critical: '#b91c1c', high: '#c2410c', medium: '#a16207', low: '#15803d',
                 };
                 function sectionTitle(title, y) {
-                    doc.fontSize(14).fillColor(black).text(title, 50, y, { continued: false });
-                    doc.moveTo(50, y + 20).lineTo(50 + pageWidth, y + 20).strokeColor(borderColor).lineWidth(1).stroke();
-                    return y + 30;
+                    doc.fontSize(13).fillColor(black).text(title, 50, y, { continued: false });
+                    doc.moveTo(50, y + 18).lineTo(50 + pageWidth, y + 18).strokeColor(borderColor).lineWidth(1).stroke();
+                    return y + 28;
                 }
                 function field(label, value, y, valColor) {
                     doc.fontSize(8.5).fillColor(midGray).text(label, 50, y, { width: 120, continued: false });
                     doc.fontSize(8.5).fillColor(valColor || black).text(value, 175, y, { width: pageWidth - 125, continued: false });
                     return y + 13;
-                }
-                function horizontalLine(y, width) {
-                    doc.moveTo(50, y).lineTo(50 + (width || pageWidth), y).strokeColor(borderColor).lineWidth(0.5).stroke();
                 }
                 function drawCard(y, height) {
                     doc.roundedRect(50, y, pageWidth, height, 3).fillColor(white).fill().strokeColor(borderColor).lineWidth(0.5).stroke();
@@ -69,136 +65,142 @@ let ExportService = class ExportService {
                     doc.roundedRect(50, y, pageWidth, height, 3).fillColor(white).fill().strokeColor(borderColor).lineWidth(0.5).stroke();
                     doc.roundedRect(50, y, 3, height, 1).fillColor(barColor).fill();
                 }
-                doc.fontSize(18).fillColor(black).text('Auditoria de Seguridad Web', 50, 50, { align: 'center' });
-                horizontalLine(75);
-                doc.fontSize(8).fillColor(midGray).text('Reporte Tecnico de Auditoria de Headers de Seguridad', 50, 82, { align: 'center' });
-                let y = 100;
-                drawCard(y, 75);
-                doc.fontSize(8.5).fillColor(midGray).text('URL:', 62, y + 8, { width: 55 });
-                doc.fontSize(8.5).fillColor(black).text(result.url, 117, y + 8, { width: pageWidth - 80 });
-                doc.fontSize(8.5).fillColor(midGray).text('Fecha:', 62, y + 23, { width: 55 });
-                doc.fontSize(8.5).fillColor(black).text(new Date(result.timestamp).toLocaleString('es-ES'), 117, y + 23, { width: pageWidth - 80 });
-                doc.fontSize(8.5).fillColor(midGray).text('Duracion:', 62, y + 38, { width: 55 });
-                doc.fontSize(8.5).fillColor(black).text(`${result.metadata.responseTime}ms`, 117, y + 38, { width: pageWidth - 80 });
-                doc.fontSize(8.5).fillColor(midGray).text('Status HTTP:', 62, y + 53, { width: 55 });
-                doc.fontSize(8.5).fillColor(black).text(`${result.metadata.statusCode}`, 117, y + 53, { width: pageWidth - 80 });
-                y += 85;
+                function needsPage(y, needed) {
+                    return y + needed > doc.page.height - 60;
+                }
+                function checkPage(y, needed) {
+                    if (needsPage(y, needed)) {
+                        doc.addPage();
+                        return 50;
+                    }
+                    return y;
+                }
+                doc.fontSize(20).fillColor(black).text('Auditoria de Seguridad Web', 50, 50, { align: 'center' });
+                doc.moveTo(50, 78).lineTo(50 + pageWidth, 78).strokeColor(borderColor).lineWidth(2).stroke();
+                doc.fontSize(8).fillColor(midGray).text('Reporte Tecnico de Auditoria', 50, 88, { align: 'center' });
+                let y = 110;
+                const infoItems = [
+                    ['URL', result.url],
+                    ['Fecha', new Date(result.timestamp).toLocaleString('es-ES')],
+                    ['Duracion', `${result.metadata.responseTime}ms`],
+                    ['Status HTTP', `${result.metadata.statusCode}`],
+                ];
+                infoItems.forEach(([label, value], i) => {
+                    doc.fontSize(8).fillColor(midGray).text(label, 50, y + i * 13, { width: 65 });
+                    doc.fontSize(8).fillColor(black).text(value, 115, y + i * 13, { width: pageWidth - 70 });
+                });
+                y += infoItems.length * 13 + 10;
                 const scoreColor = gradeColors[result.grade] || black;
-                drawCard(y, 60);
-                doc.fontSize(30).fillColor(scoreColor).text(result.grade, 62, y + 12, { width: 50, align: 'center' });
-                doc.fontSize(20).fillColor(black).text(`${result.score}/100`, 115, y + 14, { width: 80 });
-                doc.fontSize(8).fillColor(midGray).text('Puntuacion total', 115, y + 38, { width: 80 });
-                const gradeDescriptions = {
+                drawCard(y, 55);
+                doc.fontSize(28).fillColor(scoreColor).text(result.grade, 62, y + 10, { width: 45, align: 'center' });
+                doc.fontSize(18).fillColor(black).text(`${result.score}/100`, 110, y + 12, { width: 70 });
+                doc.fontSize(7.5).fillColor(midGray).text('Puntuacion total', 110, y + 34, { width: 70 });
+                const gradeDesc = {
                     A: 'Excelente. La mayoria de headers de seguridad estan presentes y correctamente configurados.',
                     B: 'Buena. Algunos headers menores necesitan ajuste.',
                     C: 'Aceptable. Varios headers importantes necesitan configuracion.',
                     D: 'Deficiente. Faltan headers de seguridad criticos o estan mal configurados.',
                     E: 'Mala. La mayoria de headers de seguridad estan ausentes.',
-                    F: 'Critica. El sitio carece de protecciones esenciales. Vulnerable a multiples ataques.',
+                    F: 'Critica. El sitio carece de protecciones esenciales.',
                 };
-                doc.fontSize(8).fillColor(darkGray).text(gradeDescriptions[result.grade] || '', 200, y + 14, { width: pageWidth - 160 });
-                y += 70;
+                doc.fontSize(7.5).fillColor(darkGray).text(gradeDesc[result.grade] || '', 195, y + 10, { width: pageWidth - 155 });
+                y += 65;
                 if (result.tls && result.tls.checked) {
+                    y = checkPage(y, 190);
                     y = sectionTitle('TLS / SSL', y);
                     if (result.tls.error) {
-                        drawCard(y, 18);
-                        doc.fontSize(8).fillColor(accentRed).text(`Error: ${result.tls.error}`, 62, y + 4, { width: pageWidth - 24 });
-                        y += 28;
+                        drawCard(y, 16);
+                        doc.fontSize(7.5).fillColor(accentRed).text(`Error: ${result.tls.error}`, 62, y + 4, { width: pageWidth - 24 });
+                        y += 24;
                     }
                     else {
-                        const certHeight = result.tls.certificate ? 175 : 55;
-                        if (y > doc.page.height - certHeight - 50) {
-                            doc.addPage();
-                            y = 50;
-                        }
-                        drawCard(y, certHeight);
+                        drawCard(y, result.tls.certificate ? 170 : 50);
                         let ty = y + 8;
-                        ty = field('Version TLS', result.tls.tlsVersion || 'N/A', ty);
-                        ty = field('Grade TLS', `${Math.round(result.tls.grade * 100)}%`, ty);
+                        ty = field('Version', result.tls.tlsVersion || 'N/A', ty);
+                        ty = field('Grade', `${Math.round(result.tls.grade * 100)}%`, ty);
                         if (result.tls.certificate) {
                             const c = result.tls.certificate;
-                            horizontalLine(ty + 3, pageWidth - 24);
-                            ty += 10;
-                            ty = field('Sujeto', c.subject, ty);
+                            doc.moveTo(62, ty + 2).lineTo(50 + pageWidth - 12, ty + 2).strokeColor(borderColor).lineWidth(0.5).stroke();
+                            ty += 9;
                             ty = field('Emisor', c.issuer, ty);
-                            ty = field('Valido desde', c.validFrom, ty);
                             const expiryCol = c.expired ? accentRed : c.expiresInDays < 30 ? accentOrange : black;
                             ty = field('Valido hasta', `${c.validTo}${c.expired ? ' (EXPIRADO)' : ` (${c.expiresInDays} dias)`}`, ty, expiryCol);
                             ty = field('Self-signed', c.selfSigned ? 'Si' : 'No', ty);
-                            ty = field('Wildcard', c.wildcard ? 'Si' : 'No', ty);
-                            if (c.san.length > 0) {
-                                ty = field('SAN', c.san.slice(0, 6).join(', ') + (c.san.length > 6 ? '...' : ''), ty);
-                            }
                         }
-                        y += certHeight + 10;
+                        y += (result.tls.certificate ? 180 : 55);
                     }
                 }
-                if (y > doc.page.height - 120) {
-                    doc.addPage();
-                    y = 50;
+                if (result.dns && result.dns.checked) {
+                    y = checkPage(y, 180);
+                    y = sectionTitle('DNS / Email Security', y);
+                    if (result.dns.error) {
+                        drawCard(y, 16);
+                        doc.fontSize(7.5).fillColor(accentRed).text(`Error: ${result.dns.error}`, 62, y + 4, { width: pageWidth - 24 });
+                        y += 24;
+                    }
+                    else {
+                        const dnsRecords = [result.dns.spf, result.dns.dkim, result.dns.dmarc];
+                        const cardH = 52;
+                        const totalH = dnsRecords.length * (cardH + 4) + 5;
+                        drawCard(y, totalH);
+                        let dy = y + 6;
+                        for (const rec of dnsRecords) {
+                            const recColor = rec.grade >= 1 ? accentGreen : rec.grade >= 0.5 ? accentYellow : accentRed;
+                            doc.roundedRect(62, dy, 3, cardH - 8, 1).fillColor(recColor).fill();
+                            doc.fontSize(8.5).fillColor(black).text(rec.type, 74, dy + 2, { width: 40 });
+                            doc.fontSize(7).fillColor(recColor).text(rec.present ? `Grado ${Math.round(rec.grade * 100)}%` : 'AUSENTE', 115, dy + 3, { width: pageWidth - 130 });
+                            doc.fontSize(6.5).fillColor(darkGray).text(rec.finding.length > 90 ? rec.finding.substring(0, 90) + '...' : rec.finding, 74, dy + 16, { width: pageWidth - 36 });
+                            dy += cardH;
+                        }
+                        y += totalH + 10;
+                    }
                 }
+                doc.addPage();
+                y = 50;
                 y = sectionTitle('Headers de Seguridad', y);
                 for (const h of result.headers) {
-                    if (y > doc.page.height - 85) {
-                        doc.addPage();
-                        y = 50;
-                    }
+                    const cardH = h.recommendation && h.grade < 1.0 ? 60 : 46;
+                    y = checkPage(y, cardH + 6);
                     const sevColor = severityColors[h.severity] || midGray;
-                    const cardH = h.recommendation && h.grade < 1.0 ? 62 : 48;
                     cardWithLeftBar(y, cardH, sevColor);
-                    doc.fontSize(9).fillColor(black).text(h.header, 62, y + 5, { width: pageWidth - 140 });
+                    doc.fontSize(8.5).fillColor(black).text(h.header, 62, y + 5, { width: pageWidth - 140 });
                     doc.fontSize(7).fillColor(sevColor).text(h.severity.toUpperCase(), 62, y + 18, { width: 40 });
                     doc.fontSize(7).fillColor(midGray).text(`Grado: ${Math.round(h.grade * 100)}%  Peso: ${h.weight}`, 110, y + 18, { width: pageWidth - 160 });
                     const gradeTxt = h.grade === 1 ? 'OK' : h.grade > 0.5 ? 'Regular' : h.grade > 0 ? 'Bajo' : 'AUSENTE';
                     const gColor = h.grade === 1 ? accentGreen : h.grade > 0.5 ? accentYellow : accentRed;
                     doc.fontSize(8).fillColor(gColor).text(gradeTxt, 50 + pageWidth - 55, y + 5, { width: 50, align: 'right' });
-                    doc.fontSize(7).fillColor(darkGray).text(h.finding, 62, y + 30, { width: pageWidth - 24 });
+                    doc.fontSize(7).fillColor(darkGray).text(h.finding, 62, y + 28, { width: pageWidth - 24 });
                     if (h.recommendation && h.grade < 1.0) {
-                        doc.fontSize(6.5).fillColor(midGray).text(`Recomendacion: ${h.recommendation}`, 62, y + 44, { width: pageWidth - 24 });
+                        doc.fontSize(6.5).fillColor(midGray).text(`Rec: ${h.recommendation}`, 62, y + 42, { width: pageWidth - 24 });
                     }
                     y += cardH + 4;
                 }
-                if (y > doc.page.height - 150) {
-                    doc.addPage();
-                    y = 50;
-                }
+                y = checkPage(y, 60);
                 y += 5;
                 y = sectionTitle('Cumplimiento Normativo', y);
                 for (const comp of result.compliance) {
-                    if (y > doc.page.height - 120) {
-                        doc.addPage();
-                        y = 50;
-                    }
+                    y = checkPage(y, 30 + comp.findings.length * 40);
                     doc.fontSize(10).fillColor(accentBlue).text(`${comp.framework} v${comp.version}`, 50, y);
                     y += 16;
                     for (const f of comp.findings) {
-                        if (y > doc.page.height - 60) {
-                            doc.addPage();
-                            y = 50;
-                        }
+                        y = checkPage(y, 40);
                         const compColor = f.status === 'compliant' ? accentGreen
                             : f.status === 'partially_compliant' ? accentYellow
                                 : f.status === 'non_compliant' ? accentRed : midGray;
-                        cardWithLeftBar(y, 36, compColor);
+                        cardWithLeftBar(y, 34, compColor);
                         doc.fontSize(8).fillColor(black).text(f.control, 62, y + 4, { width: pageWidth - 130 });
                         doc.fontSize(7).fillColor(compColor).text(f.status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()), 50 + pageWidth - 70, y + 4, { width: 65, align: 'right' });
-                        doc.fontSize(7).fillColor(darkGray).text(f.description, 62, y + 18, { width: pageWidth - 24 });
-                        y += 42;
+                        doc.fontSize(7).fillColor(darkGray).text(f.description, 62, y + 17, { width: pageWidth - 24 });
+                        y += 40;
                     }
                     y += 4;
                 }
                 if (result.recommendations.length > 0) {
-                    if (y > doc.page.height - 120) {
-                        doc.addPage();
-                        y = 50;
-                    }
+                    y = checkPage(y, 40);
                     y += 5;
                     y = sectionTitle('Recomendaciones', y);
                     for (const rec of result.recommendations) {
-                        if (y > doc.page.height - 40) {
-                            doc.addPage();
-                            y = 50;
-                        }
+                        y = checkPage(y, 22);
                         const recColor = rec.startsWith('[CRITICAL]') ? accentRed
                             : rec.startsWith('[HIGH]') ? accentOrange
                                 : rec.startsWith('[MEDIUM]') ? accentYellow : midGray;
@@ -207,9 +209,10 @@ let ExportService = class ExportService {
                         y += 22;
                     }
                 }
-                y = doc.page.height - 40;
-                horizontalLine(y);
-                doc.fontSize(7).fillColor(lightGray).text(`Generado el ${new Date().toLocaleString('es-ES')} por Auditoria Web Scanner v1.0`, 50, y + 5, { width: pageWidth, align: 'center' });
+                const footerText = `Generado el ${new Date().toLocaleString('es-ES')} por Auditoria Web Scanner v1.0`;
+                const fy = doc.y + 15;
+                doc.moveTo(50, fy).lineTo(50 + pageWidth, fy).strokeColor(borderColor).lineWidth(0.5).stroke();
+                doc.fontSize(7).fillColor(lightGray).text(footerText, 50, fy + 4, { width: pageWidth, align: 'center' });
                 doc.end();
             }
             catch (err) {
