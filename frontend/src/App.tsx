@@ -20,6 +20,30 @@ interface ComplianceFinding {
   recommendation: string
 }
 
+interface CertificateInfo {
+  subject: string
+  issuer: string
+  validFrom: string
+  validTo: string
+  expiresInDays: number
+  expired: boolean
+  selfSigned: boolean
+  wildcard: boolean
+  fingerprint: string
+  serialNumber: string
+  san: string[]
+}
+
+interface TlsInfo {
+  checked: boolean
+  hostname: string
+  port: number
+  error: string | null
+  tlsVersion: string | null
+  certificate: CertificateInfo | null
+  grade: number
+}
+
 interface ComplianceSection {
   framework: string
   version: string
@@ -39,6 +63,7 @@ interface ScanResult {
     statusCode: number
     analyzedAt: string
   }
+  tls: TlsInfo
 }
 
 function getGradeColor(grade: string): string {
@@ -171,7 +196,7 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>🔒 Auditoría de Seguridad Web</h1>
+        <h1>Auditoría de Seguridad Web</h1>
         <p>Analizador pasivo de headers de seguridad HTTP</p>
       </header>
 
@@ -235,6 +260,12 @@ function App() {
                 <span className="meta-label">Headers</span>
                 <span className="meta-value">
                   {result.headers.length} analizados
+                </span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-label">TLS</span>
+                <span className="meta-value">
+                  {result.tls.tlsVersion || (result.tls.error ? 'Error' : 'No verificado')}
                 </span>
               </div>
               <div className="meta-row">
@@ -334,6 +365,80 @@ function App() {
             ))}
           </section>
 
+          <section className="section">
+            <h2>TLS / SSL</h2>
+            {result.tls.error ? (
+              <div className="error-banner">
+                {result.tls.error}
+              </div>
+            ) : (
+              <div className="tls-grid">
+                <div className="tls-card">
+                  <div className="tls-card-header">Conexion</div>
+                  <div className="tls-card-body">
+                    <div className="tls-row">
+                      <span className="tls-label">Version TLS</span>
+                      <span className="tls-value">{result.tls.tlsVersion || 'N/A'}</span>
+                    </div>
+                    <div className="tls-row">
+                      <span className="tls-label">Host</span>
+                      <span className="tls-value">{result.tls.hostname}:{result.tls.port}</span>
+                    </div>
+                    <div className="tls-row">
+                      <span className="tls-label">Grade</span>
+                      <span className={`tls-value tls-grade-${result.tls.grade >= 0.8 ? 'good' : result.tls.grade >= 0.5 ? 'warn' : 'bad'}`}>
+                        {Math.round(result.tls.grade * 100)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {result.tls.certificate && (
+                  <>
+                    <div className="tls-card">
+                      <div className="tls-card-header">Certificado</div>
+                      <div className="tls-card-body">
+                        <div className="tls-row">
+                          <span className="tls-label">Sujeto</span>
+                          <span className="tls-value mono">{result.tls.certificate.subject}</span>
+                        </div>
+                        <div className="tls-row">
+                          <span className="tls-label">Emisor</span>
+                          <span className="tls-value mono">{result.tls.certificate.issuer}</span>
+                        </div>
+                        <div className="tls-row">
+                          <span className="tls-label">Valido desde</span>
+                          <span className="tls-value">{result.tls.certificate.validFrom}</span>
+                        </div>
+                        <div className="tls-row">
+                          <span className="tls-label">Valido hasta</span>
+                          <span className={`tls-value ${result.tls.certificate.expired ? 'tls-expired' : ''}`}>
+                            {result.tls.certificate.validTo}
+                            {result.tls.certificate.expired ? ' (EXPIRADO)' : result.tls.certificate.expiresInDays < 30 ? ` (${result.tls.certificate.expiresInDays} dias)` : ''}
+                          </span>
+                        </div>
+                        <div className="tls-row">
+                          <span className="tls-label">Self-signed</span>
+                          <span className="tls-value">{result.tls.certificate.selfSigned ? 'Si' : 'No'}</span>
+                        </div>
+                        <div className="tls-row">
+                          <span className="tls-label">Wildcard</span>
+                          <span className="tls-value">{result.tls.certificate.wildcard ? 'Si' : 'No'}</span>
+                        </div>
+                        {result.tls.certificate.san.length > 0 && (
+                          <div className="tls-row">
+                            <span className="tls-label">SAN</span>
+                            <span className="tls-value mono">{result.tls.certificate.san.slice(0, 5).join(', ')}{result.tls.certificate.san.length > 5 ? '...' : ''}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </section>
+
           {result.recommendations.length > 0 && (
             <section className="section">
               <h2>Recomendaciones</h2>
@@ -352,7 +457,7 @@ function App() {
       <footer className="footer">
         <p>
           Herramienta de auditoría pasiva — Proyecto de Master en
-          Ciberseguridad
+          Ciberseguridad — Andres Caso Iglesias
         </p>
       </footer>
     </div>

@@ -12,6 +12,7 @@ const axios_1 = require("@nestjs/axios");
 const scanner_controller_1 = require("./scanner.controller");
 const scanner_service_1 = require("./scanner.service");
 const http_client_service_1 = require("./http-client/http-client.service");
+const tls_checker_service_1 = require("./tls/tls-checker.service");
 const analyzer_module_1 = require("../analyzer/analyzer.module");
 const compliance_module_1 = require("../compliance/compliance.module");
 const report_module_1 = require("../report/report.module");
@@ -30,7 +31,7 @@ exports.ScannerModule = ScannerModule = __decorate([
             report_module_1.ReportModule,
         ],
         controllers: [scanner_controller_1.ScannerController],
-        providers: [scanner_service_1.ScannerService, http_client_service_1.HttpClientService],
+        providers: [scanner_service_1.ScannerService, http_client_service_1.HttpClientService, tls_checker_service_1.TlsCheckerService],
         exports: [scanner_service_1.ScannerService],
     })
 ], ScannerModule);

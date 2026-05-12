@@ -96,12 +96,13 @@ auditoria-web/
 │   ├── main.ts                   # Bootstrap + Swagger
 │   ├── app.module.ts             # Modulo raiz
 │   ├── common/                   # Interfaces, constantes, filtros, pipes
-│   ├── scanner/                  # Controller, DTOs, HTTP client
+│   ├── scanner/                  # Controller, DTOs, HTTP client, TLS checker
+│   │   └── tls/                  #   Verificacion TLS/SSL
 │   ├── analyzer/                 # Score calculator + 15 header checkers
 │   ├── compliance/               # Mappers OWASP Top 10 + NIS2
 │   └── report/                   # Generacion de reportes JSON
 ├── test/                         # Tests unitarios y e2e
-│   ├── unit/                     # 11 suites de tests
+│   ├── unit/                     # 19 suites de tests (83 tests)
 │   └── e2e/                      # Tests de integracion
 ├── frontend/                     # Frontend React + Vite
 │   ├── src/
@@ -185,6 +186,27 @@ Escanea una URL y devuelve un reporte de seguridad.
     "[CRITICAL] Implement a strict CSP policy...",
     "[HIGH] Add: Strict-Transport-Security..."
   ],
+  "tls": {
+    "checked": true,
+    "hostname": "example.com",
+    "port": 443,
+    "error": null,
+    "tlsVersion": "TLSv1.3",
+    "certificate": {
+      "subject": "CN=example.com",
+      "issuer": "C=US, O=Example CA",
+      "validFrom": "Jan 1 00:00:00 2025 GMT",
+      "validTo": "Jan 1 00:00:00 2026 GMT",
+      "expiresInDays": 100,
+      "expired": false,
+      "selfSigned": false,
+      "wildcard": false,
+      "fingerprint": "AA:BB:CC:DD:EE:FF:00:11...",
+      "serialNumber": "1234567890",
+      "san": ["example.com"]
+    },
+    "grade": 1.0
+  },
   "metadata": {
     "responseTime": 212,
     "statusCode": 200,

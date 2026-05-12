@@ -3,6 +3,7 @@ import { HttpModule } from '@nestjs/axios';
 import { ScannerController } from './scanner.controller';
 import { ScannerService } from './scanner.service';
 import { HttpClientService } from './http-client/http-client.service';
+import { TlsCheckerService } from './tls/tls-checker.service';
 import { AnalyzerModule } from '../analyzer/analyzer.module';
 import { ComplianceModule } from '../compliance/compliance.module';
 import { ReportModule } from '../report/report.module';
@@ -18,7 +19,7 @@ import { ReportModule } from '../report/report.module';
     ReportModule,
   ],
   controllers: [ScannerController],
-  providers: [ScannerService, HttpClientService],
+  providers: [ScannerService, HttpClientService, TlsCheckerService],
   exports: [ScannerService],
 })
 export class ScannerModule {}

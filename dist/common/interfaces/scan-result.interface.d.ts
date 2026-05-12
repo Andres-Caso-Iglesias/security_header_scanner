@@ -1,4 +1,5 @@
 import type { HeaderResult } from './header-checker.interface';
+import type { TlsInfo } from './tls-info.interface';
 export interface ComplianceFinding {
     control: string;
     status: 'compliant' | 'partially_compliant' | 'non_compliant' | 'not_applicable';
@@ -25,4 +26,5 @@ export interface ScanResult {
     compliance: ComplianceSection[];
     recommendations: string[];
     metadata: ScanMetadata;
+    tls: TlsInfo;
 }

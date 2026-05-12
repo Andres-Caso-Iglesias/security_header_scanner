@@ -12,24 +12,42 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScannerService = void 0;
 const common_1 = require("@nestjs/common");
 const http_client_service_1 = require("./http-client/http-client.service");
+const tls_checker_service_1 = require("./tls/tls-checker.service");
 const analyzer_service_1 = require("../analyzer/analyzer.service");
 const compliance_service_1 = require("../compliance/compliance.service");
 const report_service_1 = require("../report/report.service");
 let ScannerService = class ScannerService {
     httpClient;
+    tlsChecker;
     analyzer;
     compliance;
     report;
-    constructor(httpClient, analyzer, compliance, report) {
+    constructor(httpClient, tlsChecker, analyzer, compliance, report) {
         this.httpClient = httpClient;
+        this.tlsChecker = tlsChecker;
         this.analyzer = analyzer;
         this.compliance = compliance;
         this.report = report;
     }
     async scan(url) {
-        const httpResult = await this.httpClient.fetch(url);
+        const parsedUrl = new URL(url);
+        const hostname = parsedUrl.hostname;
+        const port = parsedUrl.port ? parseInt(parsedUrl.port, 10) : 443;
+        const protocol = parsedUrl.protocol;
+        const [httpResult, tlsResult] = await Promise.all([
+            this.httpClient.fetch(url),
+            protocol === 'https:' ? this.tlsChecker.check(hostname, port) : Promise.resolve({
+                checked: false,
+                hostname,
+                port,
+                error: 'TLS check only applies to HTTPS URLs',
+                tlsVersion: null,
+                certificate: null,
+                grade: 0,
+            }),
+        ]);
         const analysisResult = this.analyzer.analyze(httpResult.headers);
-        const complianceResult = this.compliance.evaluate(analysisResult.headers);
+        const complianceResult = this.compliance.evaluate(analysisResult.headers, tlsResult);
         const report = this.report.generate({
             url,
             headers: analysisResult,
@@ -39,6 +57,7 @@ let ScannerService = class ScannerService {
                 statusCode: httpResult.statusCode,
                 analyzedAt: new Date().toISOString(),
             },
+            tls: tlsResult,
         });
         return report;
     }
@@ -47,6 +66,7 @@ exports.ScannerService = ScannerService;
 exports.ScannerService = ScannerService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [http_client_service_1.HttpClientService,
+        tls_checker_service_1.TlsCheckerService,
         analyzer_service_1.AnalyzerService,
         compliance_service_1.ComplianceService,
         report_service_1.ReportService])

@@ -34,6 +34,9 @@ HTTP Request (POST /api/scan)
        +---> HttpClientService (fetch HTTP)
        |          |
        |          v
+       +---> TlsCheckerService (TLS/SSL en paralelo)
+       |          |
+       |          v
        +---> AnalyzerService (15 checkers)
        |          |
        |          +---> ScoreCalculator
@@ -54,11 +57,13 @@ HTTP Request (POST /api/scan)
 1. El cliente envia `POST /api/scan` con `{ "url": "https://..." }`
 2. `ValidationPipe` valida y transforma el body segun `ScanRequestDto`
 3. `ScannerController` delega en `ScannerService.scan(url)`
-4. `HttpClientService` realiza la peticion HTTP con Axios (timeout 10s, max 5 redirects)
-5. `AnalyzerService` recibe los headers raw y los pasa por los 15 checkers
-6. `ScoreCalculator` calcula el puntaje ponderado (0-100) y asigna grado A-F
-7. `ComplianceService` mapea los hallazgos a OWASP Top 10 y NIS2
-8. `ReportService` genera el JSON final con score, headers, compliance y recomendaciones
+4. Se parsea la URL para extraer hostname, puerto y protocolo
+5. `HttpClientService` (fetch HTTP) y `TlsCheckerService` (TLS/SSL) se ejecutan EN PARALELO via `Promise.all`
+6. `AnalyzerService` recibe los headers raw y los pasa por los 15 checkers
+7. `ScoreCalculator` calcula el puntaje ponderado (0-100) y asigna grado A-F
+8. `TlsCheckerService` devuelve informacion del certificado TLS (version, validez, emisor, SAN, etc.) y un grade TLS
+9. `ComplianceService` mapea los hallazgos (headers + TLS) a OWASP Top 10 y NIS2
+10. `ReportService` genera el JSON final con score, headers, compliance, tls y recomendaciones
 
 ## Modulos
 
@@ -134,6 +139,61 @@ async scan(url: string): Promise<ScanResult> {
 }
 ```
 
+### TlsCheckerService
+
+Servicio independiente que realiza una conexion TLS raw con el servidor destino para extraer informacion del protocolo y certificado.
+
+**Ubicacion:** `src/scanner/tls/tls-checker.service.ts`
+
+**Tecnologia:** Node.js `tls` nativo (no Axios, que no expone detalles del certificado)
+
+**Flujo de ejecucion:**
+1. `tls.connect(port, hostname, { servername: hostname, rejectUnauthorized: false })`
+2. En `secureConnect` se obtiene `socket.getProtocol()` (version TLS) y `socket.getPeerCertificate(true)` (certificado completo)
+3. Timeout configurable de 8 segundos
+4. En caso de error, retorna un objeto `TlsInfo` con el campo `error` poblado (NUNCA lanza excepcion)
+
+**Datos extraidos del certificado:**
+
+| Campo | Descripcion |
+|-------|-------------|
+| `subject` | Subject completo del certificado (CN, O, etc.) |
+| `issuer` | Entidad emisora (CA que emitio el certificado) |
+| `validFrom` | Fecha de inicio de validez |
+| `validTo` | Fecha de expiracion |
+| `expiresInDays` | Dias restantes hasta la expiracion |
+| `expired` | Booleano: true si el certificado ha expirado |
+| `selfSigned` | Booleano: true si Subject = Issuer |
+| `wildcard` | Booleano: true si el CN comienza con `*.` |
+| `fingerprint` | SHA256 fingerprint del certificado |
+| `serialNumber` | Numero de serie del certificado |
+| `san` | Lista de Subject Alternative Names (DNS) |
+
+**Calculo del grade TLS:**
+
+El grade TLS se calcula como 50% version del protocolo + 50% calidad del certificado:
+
+```
+tlsScore = version === 'TLSv1.3' ? 1.0
+         : version === 'TLSv1.2' ? 0.8
+         : version === 'TLSv1.1' ? 0.3
+         : version === 'TLSv1'   ? 0.0
+         :                          0.5
+
+certScore = expired       ? 0.0
+          : selfSigned    ? 0.3
+          : wildcard      ? 0.7
+          :                 1.0
+
+// Penalizacion adicional por expiracion proxima
+if (expiresInDays < 30)  certScore = min(certScore, 0.5)
+if (expiresInDays < 90)  certScore = min(certScore, 0.8)
+
+tlsGrade = tlsScore * 0.5 + certScore * 0.5
+```
+
+**Ejecucion en paralelo:** El `ScannerService` ejecuta `HttpClientService.fetch()` y `TlsCheckerService.check()` simultaneamente mediante `Promise.all`. Esto asegura que el escaneo TLS no agregue latencia adicional significativa.
+
 ### Analyzer Module
 
 Corazon del sistema. Contiene el motor de analisis y los 15 checkers individuales.
@@ -177,6 +237,7 @@ Mapea a 3 controles del OWASP Top 10 2021:
 | A01.2 - Cookie Security | Set-Cookie | Flags faltantes = non_compliant |
 | A05.1 - Critical Security Headers | CSP, HSTS, XFO, CORS, Set-Cookie | Cualquier critical/high con grade < 0.5 = non_compliant |
 | A05.2 - High Priority Headers | (high severity) | High con grade < 0.5 = partially_compliant |
+| A05.3 - TLS Configuration | TLS info (version, cert) | TLS < 1.2, expirado, self-signed = non_compliant |
 | A06.1 - Information Disclosure | X-Powered-By, Server | Presente = non_compliant |
 
 **`src/compliance/mappers/nis2.mapper.ts`**
@@ -188,7 +249,7 @@ Mapea a 4 controles del Articulo 21 de la Directiva NIS2 2023:
 | Art.21(c) - Access Control | CORS, Set-Cookie, COOP | Configuracion debil = non_compliant |
 | Art.21(d) - Incident Handling | CSP (report-uri/report-to) | Sin reporting = partially_compliant |
 | Art.21(g) - Supply Chain Security | CORP, COEP | Permisivo = partially_compliant |
-| Art.21(i) - Cryptography | HSTS | Sin HSTS = non_compliant, debil = partially_compliant |
+| Art.21(i) - Cryptography | HSTS, TLS info (version, cert) | Sin HSTS = non_compliant. Evalua TLS version real, expiracion de certificado, self-signed. HTTP sin TLS = non_compliant |
 
 ### Report Module
 
@@ -209,6 +270,10 @@ Genera la respuesta JSON final.
 | high | 15 |
 | medium | 10 |
 | low | 5 |
+
+### Grade TLS
+
+El grade TLS se calcula independientemente de los headers y se incluye en el reporte como informacion adicional. No afecta el score general del scanner (basado en headers). Ver seccion `TlsCheckerService` para el algoritmo completo.
 
 ### Calculo por Header
 

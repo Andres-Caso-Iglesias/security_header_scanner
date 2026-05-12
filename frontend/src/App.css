@@ -446,6 +446,91 @@ body {
   line-height: 1.4;
 }
 
+/* TLS / SSL */
+.tls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .tls-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tls-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tls-card-header {
+  background: #334155;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tls-card-body {
+  padding: 0.75rem;
+}
+
+.tls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid #1e293b;
+  gap: 0.5rem;
+}
+
+.tls-row:last-child {
+  border-bottom: none;
+}
+
+.tls-label {
+  color: #64748b;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.tls-value {
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  text-align: right;
+  word-break: break-all;
+}
+
+.tls-value.mono {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+}
+
+.tls-value.tls-expired {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.tls-grade-good {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.tls-grade-warn {
+  color: #eab308;
+  font-weight: 600;
+}
+
+.tls-grade-bad {
+  color: #dc2626;
+  font-weight: 600;
+}
+
 /* Footer */
 .footer {
   text-align: center;

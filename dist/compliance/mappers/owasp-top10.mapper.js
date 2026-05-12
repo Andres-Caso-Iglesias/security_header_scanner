@@ -3,12 +3,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.OwaspTop10Mapper = void 0;
 class OwaspTop10Mapper {
     version = '2021';
-    map(headers) {
+    map(headers, tls) {
         return [
-            this.mapA01BrokenAccessControl(headers),
-            this.mapA05SecurityMisconfiguration(headers),
-            this.mapA06VulnerableComponents(headers),
-        ].flat();
+            ...this.mapA01BrokenAccessControl(headers),
+            ...this.mapA05SecurityMisconfiguration(headers, tls),
+            ...this.mapA06VulnerableComponents(headers),
+        ];
     }
     mapA01BrokenAccessControl(headers) {
         const findings = [];
@@ -65,7 +65,7 @@ class OwaspTop10Mapper {
         }
         return findings;
     }
-    mapA05SecurityMisconfiguration(headers) {
+    mapA05SecurityMisconfiguration(headers, tls) {
         const findings = [];
         const criticalMissing = headers.filter((h) => h.grade < 0.5 && h.severity === 'critical');
         const highMissing = headers.filter((h) => h.grade < 0.5 && h.severity === 'high');
@@ -95,6 +95,59 @@ class OwaspTop10Mapper {
                 description: `High severity headers need attention: ${highMissing.map((h) => h.header).join(', ')}`,
                 recommendation: highMissing.map((h) => h.recommendation).join(' '),
             });
+        }
+        if (tls && tls.checked) {
+            if (tls.error && tls.error !== 'TLS check only applies to HTTPS URLs') {
+                findings.push({
+                    control: 'A05.3 - TLS Configuration',
+                    status: 'non_compliant',
+                    relatedHeaders: [],
+                    description: `TLS handshake error: ${tls.error}`,
+                    recommendation: 'Ensure the server supports TLS with a valid certificate',
+                });
+            }
+            else if (tls.certificate?.expired) {
+                findings.push({
+                    control: 'A05.3 - TLS Configuration',
+                    status: 'non_compliant',
+                    relatedHeaders: [],
+                    description: `SSL certificate expired on ${tls.certificate.validTo}`,
+                    recommendation: 'Renew the SSL certificate immediately',
+                });
+            }
+            else if (tls.tlsVersion && tls.tlsVersion < 'TLSv1.2') {
+                findings.push({
+                    control: 'A05.3 - TLS Configuration',
+                    status: 'non_compliant',
+                    relatedHeaders: [],
+                    description: `Outdated TLS version: ${tls.tlsVersion}. TLS 1.2 or higher required.`,
+                    recommendation: 'Disable TLS 1.0/1.1 and enable TLS 1.2 or 1.3',
+                });
+            }
+            else if (tls.tlsVersion && tls.grade < 0.8) {
+                findings.push({
+                    control: 'A05.3 - TLS Configuration',
+                    status: 'partially_compliant',
+                    relatedHeaders: [],
+                    description: tls.certificate?.selfSigned
+                        ? 'SSL certificate is self-signed'
+                        : tls.certificate?.wildcard
+                            ? 'SSL certificate uses wildcard'
+                            : `TLS ${tls.tlsVersion} is configured but has room for improvement`,
+                    recommendation: tls.certificate?.selfSigned
+                        ? 'Replace self-signed certificate with one from a trusted CA'
+                        : 'Review TLS configuration for best practices',
+                });
+            }
+            else if (tls.grade >= 0.8) {
+                findings.push({
+                    control: 'A05.3 - TLS Configuration',
+                    status: 'compliant',
+                    relatedHeaders: [],
+                    description: `TLS ${tls.tlsVersion} with valid certificate properly configured`,
+                    recommendation: 'Maintain current TLS configuration',
+                });
+            }
         }
         return findings;
     }

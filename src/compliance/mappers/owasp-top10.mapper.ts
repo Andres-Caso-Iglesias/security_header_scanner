@@ -1,15 +1,16 @@
-import { HeaderResult } from '../../common/interfaces/header-checker.interface';
-import { ComplianceFinding } from '../interfaces/compliance-finding.interface';
+import type { HeaderResult } from '../../common/interfaces/header-checker.interface';
+import type { TlsInfo } from '../../common/interfaces/tls-info.interface';
+import type { ComplianceFinding } from '../interfaces/compliance-finding.interface';
 
 export class OwaspTop10Mapper {
   private readonly version = '2021';
 
-  map(headers: HeaderResult[]): ComplianceFinding[] {
+  map(headers: HeaderResult[], tls?: TlsInfo): ComplianceFinding[] {
     return [
-      this.mapA01BrokenAccessControl(headers),
-      this.mapA05SecurityMisconfiguration(headers),
-      this.mapA06VulnerableComponents(headers),
-    ].flat();
+      ...this.mapA01BrokenAccessControl(headers),
+      ...this.mapA05SecurityMisconfiguration(headers, tls),
+      ...this.mapA06VulnerableComponents(headers),
+    ];
   }
 
   private mapA01BrokenAccessControl(headers: HeaderResult[]): ComplianceFinding[] {
@@ -70,7 +71,7 @@ export class OwaspTop10Mapper {
     return findings;
   }
 
-  private mapA05SecurityMisconfiguration(headers: HeaderResult[]): ComplianceFinding[] {
+  private mapA05SecurityMisconfiguration(headers: HeaderResult[], tls?: TlsInfo): ComplianceFinding[] {
     const findings: ComplianceFinding[] = [];
     const criticalMissing = headers.filter((h) => h.grade < 0.5 && h.severity === 'critical');
     const highMissing = headers.filter((h) => h.grade < 0.5 && h.severity === 'high');
@@ -101,6 +102,57 @@ export class OwaspTop10Mapper {
         description: `High severity headers need attention: ${highMissing.map((h) => h.header).join(', ')}`,
         recommendation: highMissing.map((h) => h.recommendation).join(' '),
       });
+    }
+
+    // TLS misconfiguration
+    if (tls && tls.checked) {
+      if (tls.error && tls.error !== 'TLS check only applies to HTTPS URLs') {
+        findings.push({
+          control: 'A05.3 - TLS Configuration',
+          status: 'non_compliant',
+          relatedHeaders: [],
+          description: `TLS handshake error: ${tls.error}`,
+          recommendation: 'Ensure the server supports TLS with a valid certificate',
+        });
+      } else if (tls.certificate?.expired) {
+        findings.push({
+          control: 'A05.3 - TLS Configuration',
+          status: 'non_compliant',
+          relatedHeaders: [],
+          description: `SSL certificate expired on ${tls.certificate.validTo}`,
+          recommendation: 'Renew the SSL certificate immediately',
+        });
+      } else if (tls.tlsVersion && tls.tlsVersion < 'TLSv1.2') {
+        findings.push({
+          control: 'A05.3 - TLS Configuration',
+          status: 'non_compliant',
+          relatedHeaders: [],
+          description: `Outdated TLS version: ${tls.tlsVersion}. TLS 1.2 or higher required.`,
+          recommendation: 'Disable TLS 1.0/1.1 and enable TLS 1.2 or 1.3',
+        });
+      } else if (tls.tlsVersion && tls.grade < 0.8) {
+        findings.push({
+          control: 'A05.3 - TLS Configuration',
+          status: 'partially_compliant',
+          relatedHeaders: [],
+          description: tls.certificate?.selfSigned
+            ? 'SSL certificate is self-signed'
+            : tls.certificate?.wildcard
+              ? 'SSL certificate uses wildcard'
+              : `TLS ${tls.tlsVersion} is configured but has room for improvement`,
+          recommendation: tls.certificate?.selfSigned
+            ? 'Replace self-signed certificate with one from a trusted CA'
+            : 'Review TLS configuration for best practices',
+        });
+      } else if (tls.grade >= 0.8) {
+        findings.push({
+          control: 'A05.3 - TLS Configuration',
+          status: 'compliant',
+          relatedHeaders: [],
+          description: `TLS ${tls.tlsVersion} with valid certificate properly configured`,
+          recommendation: 'Maintain current TLS configuration',
+        });
+      }
     }
 
     return findings;

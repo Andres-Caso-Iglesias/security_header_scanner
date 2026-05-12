@@ -3,12 +3,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Nis2Mapper = void 0;
 class Nis2Mapper {
     version = '2023';
-    map(headers) {
+    map(headers, tls) {
         return [
             this.mapArticle21cAccessControl(headers),
             this.mapArticle21dIncidentHandling(headers),
             this.mapArticle21gSupplyChain(headers),
-            this.mapArticle21iCryptography(headers),
+            this.mapArticle21iCryptography(headers, tls),
         ].flat();
     }
     mapArticle21cAccessControl(headers) {
@@ -84,33 +84,63 @@ class Nis2Mapper {
                 : 'Continue monitoring supply chain security configuration',
         };
     }
-    mapArticle21iCryptography(headers) {
+    mapArticle21iCryptography(headers, tls) {
         const hsts = headers.find((h) => h.header === 'Strict-Transport-Security');
-        const usesHttps = hsts && hsts.grade > 0;
-        const hasStrongCrypto = hsts && hsts.grade >= 0.6;
+        const hasHsts = hsts && hsts.grade > 0;
+        const strongHsts = hsts && hsts.grade >= 0.6;
+        const tlsVersion = tls?.tlsVersion;
+        const tlsError = tls?.error;
+        const certExpired = tls?.certificate?.expired;
+        const certSelfSigned = tls?.certificate?.selfSigned;
+        const tlsGrade = tls?.grade ?? 0;
+        const relatedHeaders = [];
+        if (hsts)
+            relatedHeaders.push('Strict-Transport-Security');
+        const issues = [];
+        if (tlsError) {
+            issues.push(`TLS handshake failed: ${tlsError}`);
+        }
+        else {
+            if (tlsVersion && tlsVersion < 'TLSv1.2') {
+                issues.push(`Outdated TLS version: ${tlsVersion}`);
+            }
+            if (certExpired) {
+                issues.push('SSL certificate is expired');
+            }
+            if (certSelfSigned) {
+                issues.push('SSL certificate is self-signed');
+            }
+        }
+        if (!hasHsts) {
+            issues.push('HSTS is not configured');
+        }
         let status;
         let description;
         let recommendation;
-        if (usesHttps && hasStrongCrypto) {
+        if (issues.length === 0 && strongHsts && tlsGrade >= 0.8) {
             status = 'compliant';
-            description = 'HTTPS enforcement and encryption are properly configured via HSTS';
+            description = `TLS ${tlsVersion} with valid certificate and HSTS properly configured`;
             recommendation = 'Maintain current cryptographic configuration';
         }
-        else if (usesHttps) {
+        else if (issues.length === 0 && tlsGrade >= 0.5) {
             status = 'partially_compliant';
-            description = 'HTTPS is enforced but HSTS configuration could be stronger';
-            recommendation =
-                'Strengthen HSTS: set max-age to at least 31536000 and include includeSubDomains';
+            description = 'Encryption is in place but some improvements are recommended';
+            recommendation = 'Strengthen HSTS configuration and ensure TLS 1.2 or higher';
+        }
+        else if (tlsError && tlsError === 'TLS check only applies to HTTPS URLs') {
+            status = 'non_compliant';
+            description = 'Site is served over HTTP without TLS encryption';
+            recommendation = 'Migrate to HTTPS and enforce HSTS';
         }
         else {
             status = 'non_compliant';
-            description = 'No HTTPS enforcement detected via HSTS header';
-            recommendation = 'Enable HSTS to enforce encrypted communications';
+            description = `Cryptography issues: ${issues.join('; ')}`;
+            recommendation = 'Address TLS/certificate issues and implement HSTS with strong configuration';
         }
         return {
             control: 'NIS2 Art.21(i) - Cryptography and Encryption',
             status,
-            relatedHeaders: hsts ? ['Strict-Transport-Security'] : [],
+            relatedHeaders,
             description,
             recommendation,
         };

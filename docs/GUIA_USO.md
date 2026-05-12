@@ -89,7 +89,7 @@ El reporte incluye dos secciones de compliance:
 | Control | Evalua | Que significa |
 |---------|--------|---------------|
 | A01 - Broken Access Control | CORS, cookies | Evalua si hay controles de acceso debiles que permitan acceso no autorizado |
-| A05 - Security Misconfiguration | Headers de seguridad | Evalua si faltan headers de seguridad esenciales o estan mal configurados |
+| A05 - Security Misconfiguration | Headers de seguridad, TLS/SSL | Evalua si faltan headers de seguridad esenciales, TLS desactualizado, certificados expirados o autofirmados |
 | A06 - Vulnerable Components | X-Powered-By, Server | Evalua si el sitio expone informacion sobre tecnologias que podrian tener vulnerabilidades conocidas |
 
 #### NIS2 Directive (2023) - Articulo 21
@@ -99,7 +99,7 @@ El reporte incluye dos secciones de compliance:
 | Art.21(c) - Access Control | CORS, cookies, COOP | Medidas de control de acceso a sistemas y datos |
 | Art.21(d) - Incident Handling | CSP reporting | Capacidad de detectar y reportar incidentes de seguridad |
 | Art.21(g) - Supply Chain Security | CORP, COEP | Medidas de seguridad en la cadena de suministro |
-| Art.21(i) - Cryptography | HSTS | Uso de cifrado y comunicaciones seguras |
+| Art.21(i) - Cryptography | HSTS, version TLS, certificado SSL | Uso de cifrado y comunicaciones seguras. Verifica version TLS real, validez del certificado y configuracion HSTS |
 
 Los estados de compliance son:
 - **compliant**: El control se cumple satisfactoriamente
@@ -121,6 +121,48 @@ La seccion de recomendaciones lista acciones concretas ordenadas por prioridad:
 Se recomienda abordar las recomendaciones en orden de severidad: critical primero, luego high, medium, y finalmente low.
 
 ## Glosario de Headers de Seguridad
+
+### TLS / SSL
+
+La herramienta realiza una conexion TLS real con el servidor destino para verificar el estado del certificado y la version del protocolo. Esta informacion se muestra en la seccion TLS/SSL del reporte.
+
+**Datos que se verifican:**
+
+| Dato | Que significa |
+|------|---------------|
+| Version TLS | La version del protocolo TLS negociada (TLSv1.3, TLSv1.2, etc.). TLS 1.2 o superior es el estandar actual. TLS 1.0 y 1.1 estan deprecados y son inseguros. |
+| Certificado - Sujeto | El Common Name (CN) y organizacion a la que pertenece el certificado. Debe coincidir con el dominio escaneado. |
+| Certificado - Emisor | La entidad de certificacion (CA) que emitio el certificado. Las CAs reconocidas (Let's Encrypt, DigiCert, Amazon, etc.) indican un certificado valido. |
+| Valido desde / hasta | Fechas de validez del certificado. |
+| Expirado | Indica si el certificado esta fuera de su periodo de validez. Un certificado expirado es CRITICO. |
+| Self-signed | Indica si el certificado esta auto-firmado (el emisor es el mismo que el sujeto). Los certificados autofirmados no son confiables para produccion. |
+| Wildcard | Indica si el certificado usa un comodin (`*.dominio.com`). Los wildcards son funcionales pero representan un riesgo mayor si la clave privada se compromete. |
+| Fingerprint | Huella digital SHA256 del certificado. Util para verificar manualmente la identidad del certificado. |
+| SAN (Subject Alternative Names) | Lista de dominios adicionales para los cuales el certificado es valido. |
+
+**Grade TLS:**
+
+El grade TLS se calcula combinando la version del protocolo (50%) y la calidad del certificado (50%):
+
+- TLSv1.3 = maxima puntuacion
+- TLSv1.2 = buena
+- TLSv1.1 = baja (deprecado)
+- TLSv1.0 = cero (inseguro)
+- Certificado valido y no wildcard = maxima puntuacion
+- Certificado wildcard = penalizacion leve
+- Certificado autofirmado = penalizacion fuerte
+- Certificado expirado = cero
+
+**Ejemplo de interpretacion:**
+
+```
+TLS version: TLSv1.2     -> bueno, version moderna
+Cert issuer: Amazon CA   -> CA reconocida, confiable
+Self-signed: false       -> correcto
+Wildcard: true           -> funcional pero riesgo mayor
+Expires in: 97 dias      -> renovacion no urgente
+Grade: 0.75 (75%)        -> aceptable, mejorable
+```
 
 ### Content-Security-Policy (CSP)
 **Severidad: critical**
@@ -265,7 +307,7 @@ La herramienta puede escanear cualquier URL publica accesible via HTTP/HTTPS. Si
 - Sitios detras de Cloudflare u otros WAF pueden devolver paginas de bloqueo en lugar del contenido real
 - La herramienta solo analiza headers, no ejecuta JavaScript ni analiza contenido
 
-### Que tan confiable es el analisis de compliance?
+### Como de confiable es el analisis de compliance?
 
 El analisis de compliance (OWASP Top 10, NIS2) se basa unicamente en los headers de seguridad HTTP. Estos frameworks son mucho mas amplios e incluyen requisitos organizativos, de procesos y tecnicos que no pueden verificarse solo con headers. El reporte de compliance debe considerarse una indicacion parcial, no una auditoria completa.
 

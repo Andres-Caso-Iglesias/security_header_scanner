@@ -1,8 +1,9 @@
-import { HeaderResult } from '../../common/interfaces/header-checker.interface';
-import { ComplianceFinding } from '../interfaces/compliance-finding.interface';
+import type { HeaderResult } from '../../common/interfaces/header-checker.interface';
+import type { TlsInfo } from '../../common/interfaces/tls-info.interface';
+import type { ComplianceFinding } from '../interfaces/compliance-finding.interface';
 export declare class Nis2Mapper {
     private readonly version;
-    map(headers: HeaderResult[]): ComplianceFinding[];
+    map(headers: HeaderResult[], tls?: TlsInfo): ComplianceFinding[];
     private mapArticle21cAccessControl;
     private mapArticle21dIncidentHandling;
     private mapArticle21gSupplyChain;

@@ -1,14 +1,18 @@
+import type { TlsInfo } from '../../common/interfaces/tls-info.interface';
+import type { HeaderResult } from '../../common/interfaces/header-checker.interface';
+import type { ComplianceSection } from '../../common/interfaces/scan-result.interface';
 export interface ReportInput {
     url: string;
     headers: {
-        headers: import('../../common/interfaces/header-checker.interface').HeaderResult[];
+        headers: HeaderResult[];
         score: number;
         grade: string;
     };
-    compliance: import('../../common/interfaces/scan-result.interface').ComplianceSection[];
+    compliance: ComplianceSection[];
     metadata: {
         responseTime: number;
         statusCode: number;
         analyzedAt: string;
     };
+    tls: TlsInfo;
 }
