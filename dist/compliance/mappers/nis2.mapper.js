@@ -3,11 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Nis2Mapper = void 0;
 class Nis2Mapper {
     version = '2023';
-    map(headers, tls) {
+    map(headers, tls, dns) {
         return [
             this.mapArticle21cAccessControl(headers),
             this.mapArticle21dIncidentHandling(headers),
-            this.mapArticle21gSupplyChain(headers),
+            this.mapArticle21gSupplyChain(headers, dns),
             this.mapArticle21iCryptography(headers, tls),
         ].flat();
     }
@@ -58,7 +58,7 @@ class Nis2Mapper {
                 : 'Add CSP report-to or report-uri directives to enable security incident detection',
         };
     }
-    mapArticle21gSupplyChain(headers) {
+    mapArticle21gSupplyChain(headers, dns) {
         const corp = headers.find((h) => h.header === 'Cross-Origin-Resource-Policy');
         const coep = headers.find((h) => h.header === 'Cross-Origin-Embedder-Policy');
         const relatedHeaders = [];
@@ -71,6 +71,17 @@ class Nis2Mapper {
             relatedHeaders.push(coep.header);
             issues.push('Cross-origin embedding policy is too permissive');
         }
+        if (dns && dns.checked && !dns.error) {
+            if (!dns.spf.present) {
+                issues.push('Missing SPF record - email impersonation risk');
+            }
+            if (!dns.dkim.present) {
+                issues.push('Missing DKIM record - email integrity risk');
+            }
+            if (!dns.dmarc.present) {
+                issues.push('Missing DMARC record - email spoofing risk');
+            }
+        }
         const status = issues.length === 0 ? 'compliant' : 'partially_compliant';
         return {
             control: 'NIS2 Art.21(g) - Supply Chain Security',
@@ -80,7 +91,7 @@ class Nis2Mapper {
                 ? `Supply chain security gaps: ${issues.join('; ')}`
                 : 'Supply chain security measures are properly configured',
             recommendation: issues.length > 0
-                ? 'Restrict cross-origin resource and embedding policies to prevent supply chain attacks'
+                ? 'Restrict cross-origin resource and embedding policies and configure DNS email security (SPF/DKIM/DMARC)'
                 : 'Continue monitoring supply chain security configuration',
         };
     }

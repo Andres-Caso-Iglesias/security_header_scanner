@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ScannerService } from '../../../src/scanner/scanner.service';
 import { HttpClientService } from '../../../src/scanner/http-client/http-client.service';
 import { TlsCheckerService } from '../../../src/scanner/tls/tls-checker.service';
+import { DnsCheckerService } from '../../../src/scanner/dns/dns-checker.service';
 import { AnalyzerService } from '../../../src/analyzer/analyzer.service';
 import { ComplianceService } from '../../../src/compliance/compliance.service';
 import { ReportService } from '../../../src/report/report.service';
@@ -11,6 +12,16 @@ import { ScoreCalculator } from '../../../src/analyzer/score-calculator';
 describe('ScannerService', () => {
   let service: ScannerService;
   let httpClient: jest.Mocked<HttpClientService>;
+
+  const mockDnsResult = {
+    hostname: 'example.com',
+    checked: true,
+    error: null,
+    spf: { type: 'SPF', value: 'v=spf1 -all', present: true, grade: 1.0, finding: 'SPF OK', recommendation: '' },
+    dkim: { type: 'DKIM', value: 'v=DKIM1; p=key', present: true, grade: 1.0, finding: 'DKIM OK', recommendation: '' },
+    dmarc: { type: 'DMARC', value: 'v=DMARC1; p=reject', present: true, grade: 1.0, finding: 'DMARC OK', recommendation: '' },
+    grade: 1.0,
+  };
 
   const mockTlsResult = {
     checked: true,
@@ -44,6 +55,7 @@ describe('ScannerService', () => {
         ScannerService,
         { provide: HttpClientService, useValue: httpClient },
         { provide: TlsCheckerService, useValue: { check: jest.fn().mockResolvedValue(mockTlsResult) } },
+        { provide: DnsCheckerService, useValue: { check: jest.fn().mockResolvedValue(mockDnsResult) } },
         AnalyzerService,
         ScoreCalculator,
         ComplianceService,

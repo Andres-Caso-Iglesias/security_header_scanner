@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { HeaderResult } from '../../common/interfaces/header-checker.interface';
 import { ComplianceSection, ScanMetadata } from '../../common/interfaces/scan-result.interface';
 import { TlsInfo } from '../../common/interfaces/tls-info.interface';
+import { DnsInfo } from '../../common/interfaces/dns-info.interface';
 
 export class ScanResponseDto {
   @ApiProperty({ description: 'Scanned URL' })
@@ -30,4 +31,7 @@ export class ScanResponseDto {
 
   @ApiProperty({ description: 'TLS/SSL certificate and protocol information' })
   tls: TlsInfo;
+
+  @ApiProperty({ description: 'DNS security records (SPF, DKIM, DMARC)' })
+  dns: DnsInfo;
 }

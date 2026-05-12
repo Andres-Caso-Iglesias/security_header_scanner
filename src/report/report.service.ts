@@ -6,7 +6,7 @@ import type { ReportInput } from './interfaces/report.interface';
 @Injectable()
 export class ReportService {
   generate(input: ReportInput): ScanResult {
-    const recommendations = this.generateRecommendations(input.headers.headers, input.tls);
+    const recommendations = this.generateRecommendations(input.headers.headers, input.tls, input.dns);
 
     return {
       url: input.url,
@@ -18,10 +18,15 @@ export class ReportService {
       recommendations,
       metadata: input.metadata,
       tls: input.tls,
+      dns: input.dns,
     };
   }
 
-  private generateRecommendations(headers: HeaderResult[], tls: ReportInput['tls']): string[] {
+  private generateRecommendations(
+    headers: HeaderResult[],
+    tls: ReportInput['tls'],
+    dns: ReportInput['dns'],
+  ): string[] {
     const criticalIssues = headers
       .filter((h) => h.severity === 'critical' && h.grade < 1.0)
       .map((h) => `[CRITICAL] ${h.recommendation}`);
@@ -59,6 +64,22 @@ export class ReportService {
       }
     }
 
-    return [...tlsRecs, ...criticalIssues, ...highIssues, ...mediumIssues, ...lowIssues];
+    // DNS recommendations
+    const dnsRecs: string[] = [];
+    if (dns.checked && dns.error) {
+      dnsRecs.push(`[MEDIUM] DNS check error: ${dns.error}`);
+    } else {
+      if (dns.spf.grade < 1.0) {
+        dnsRecs.push(`[MEDIUM] ${dns.spf.recommendation}`);
+      }
+      if (dns.dkim.grade < 1.0) {
+        dnsRecs.push(`[MEDIUM] ${dns.dkim.recommendation}`);
+      }
+      if (dns.dmarc.grade < 1.0) {
+        dnsRecs.push(`[MEDIUM] ${dns.dmarc.recommendation}`);
+      }
+    }
+
+    return [...tlsRecs, ...dnsRecs, ...criticalIssues, ...highIssues, ...mediumIssues, ...lowIssues];
   }
 }

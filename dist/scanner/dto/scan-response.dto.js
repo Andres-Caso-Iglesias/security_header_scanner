@@ -21,6 +21,7 @@ class ScanResponseDto {
     recommendations;
     metadata;
     tls;
+    dns;
 }
 exports.ScanResponseDto = ScanResponseDto;
 __decorate([
@@ -59,4 +60,8 @@ __decorate([
     (0, swagger_1.ApiProperty)({ description: 'TLS/SSL certificate and protocol information' }),
     __metadata("design:type", Object)
 ], ScanResponseDto.prototype, "tls", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'DNS security records (SPF, DKIM, DMARC)' }),
+    __metadata("design:type", Object)
+], ScanResponseDto.prototype, "dns", void 0);
 //# sourceMappingURL=scan-response.dto.js.map

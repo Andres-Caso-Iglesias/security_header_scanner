@@ -1,14 +1,15 @@
 import type { HeaderResult } from '../../common/interfaces/header-checker.interface';
 import type { TlsInfo } from '../../common/interfaces/tls-info.interface';
+import type { DnsInfo } from '../../common/interfaces/dns-info.interface';
 import type { ComplianceFinding } from '../interfaces/compliance-finding.interface';
 
 export class OwaspTop10Mapper {
   private readonly version = '2021';
 
-  map(headers: HeaderResult[], tls?: TlsInfo): ComplianceFinding[] {
+  map(headers: HeaderResult[], tls?: TlsInfo, dns?: DnsInfo): ComplianceFinding[] {
     return [
       ...this.mapA01BrokenAccessControl(headers),
-      ...this.mapA05SecurityMisconfiguration(headers, tls),
+      ...this.mapA05SecurityMisconfiguration(headers, tls, dns),
       ...this.mapA06VulnerableComponents(headers),
     ];
   }
@@ -71,7 +72,7 @@ export class OwaspTop10Mapper {
     return findings;
   }
 
-  private mapA05SecurityMisconfiguration(headers: HeaderResult[], tls?: TlsInfo): ComplianceFinding[] {
+  private mapA05SecurityMisconfiguration(headers: HeaderResult[], tls?: TlsInfo, dns?: DnsInfo): ComplianceFinding[] {
     const findings: ComplianceFinding[] = [];
     const criticalMissing = headers.filter((h) => h.grade < 0.5 && h.severity === 'critical');
     const highMissing = headers.filter((h) => h.grade < 0.5 && h.severity === 'high');
@@ -102,6 +103,50 @@ export class OwaspTop10Mapper {
         description: `High severity headers need attention: ${highMissing.map((h) => h.header).join(', ')}`,
         recommendation: highMissing.map((h) => h.recommendation).join(' '),
       });
+    }
+
+    // DNS security (SPF, DKIM, DMARC)
+    if (dns && dns.checked && !dns.error) {
+      const dnsIssues: string[] = [];
+      if (!dns.spf.present) dnsIssues.push('SPF');
+      if (!dns.dkim.present) dnsIssues.push('DKIM');
+      if (!dns.dmarc.present) dnsIssues.push('DMARC');
+
+      if (dnsIssues.length > 0) {
+        findings.push({
+          control: 'A05.4 - Email Security (SPF/DKIM/DMARC)',
+          status: 'non_compliant',
+          relatedHeaders: [],
+          description: `Missing DNS security records: ${dnsIssues.join(', ')}. Domain is vulnerable to email spoofing.`,
+          recommendation: dnsIssues.includes('SPF')
+            ? 'Add SPF record to authorise mail senders'
+            : dnsIssues.includes('DKIM')
+              ? 'Configure DKIM signing and publish public key'
+              : 'Publish DMARC policy with p=quarantine or p=reject',
+        });
+      } else {
+        const weakDns: string[] = [];
+        if (dns.spf.grade < 1.0) weakDns.push(`SPF (grade ${Math.round(dns.spf.grade * 100)}%)`);
+        if (dns.dmarc.grade < 1.0) weakDns.push(`DMARC (grade ${Math.round(dns.dmarc.grade * 100)}%)`);
+
+        if (weakDns.length > 0) {
+          findings.push({
+            control: 'A05.4 - Email Security (SPF/DKIM/DMARC)',
+            status: 'partially_compliant',
+            relatedHeaders: [],
+            description: `DNS security records present but could be improved: ${weakDns.join(', ')}`,
+            recommendation: 'Review SPF and DMARC configurations for optimal protection',
+          });
+        } else {
+          findings.push({
+            control: 'A05.4 - Email Security (SPF/DKIM/DMARC)',
+            status: 'compliant',
+            relatedHeaders: [],
+            description: 'All DNS security records (SPF, DKIM, DMARC) properly configured',
+            recommendation: 'Maintain current email security configuration',
+          });
+        }
+      }
     }
 
     // TLS misconfiguration

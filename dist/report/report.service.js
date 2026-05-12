@@ -10,7 +10,7 @@ exports.ReportService = void 0;
 const common_1 = require("@nestjs/common");
 let ReportService = class ReportService {
     generate(input) {
-        const recommendations = this.generateRecommendations(input.headers.headers, input.tls);
+        const recommendations = this.generateRecommendations(input.headers.headers, input.tls, input.dns);
         return {
             url: input.url,
             timestamp: new Date().toISOString(),
@@ -21,9 +21,10 @@ let ReportService = class ReportService {
             recommendations,
             metadata: input.metadata,
             tls: input.tls,
+            dns: input.dns,
         };
     }
-    generateRecommendations(headers, tls) {
+    generateRecommendations(headers, tls, dns) {
         const criticalIssues = headers
             .filter((h) => h.severity === 'critical' && h.grade < 1.0)
             .map((h) => `[CRITICAL] ${h.recommendation}`);
@@ -56,7 +57,22 @@ let ReportService = class ReportService {
                 tlsRecs.push(`[CRITICAL] Outdated TLS version: ${tls.tlsVersion}. Upgrade to TLS 1.2 or 1.3.`);
             }
         }
-        return [...tlsRecs, ...criticalIssues, ...highIssues, ...mediumIssues, ...lowIssues];
+        const dnsRecs = [];
+        if (dns.checked && dns.error) {
+            dnsRecs.push(`[MEDIUM] DNS check error: ${dns.error}`);
+        }
+        else {
+            if (dns.spf.grade < 1.0) {
+                dnsRecs.push(`[MEDIUM] ${dns.spf.recommendation}`);
+            }
+            if (dns.dkim.grade < 1.0) {
+                dnsRecs.push(`[MEDIUM] ${dns.dkim.recommendation}`);
+            }
+            if (dns.dmarc.grade < 1.0) {
+                dnsRecs.push(`[MEDIUM] ${dns.dmarc.recommendation}`);
+            }
+        }
+        return [...tlsRecs, ...dnsRecs, ...criticalIssues, ...highIssues, ...mediumIssues, ...lowIssues];
     }
 };
 exports.ReportService = ReportService;

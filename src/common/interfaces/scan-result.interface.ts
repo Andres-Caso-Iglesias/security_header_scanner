@@ -1,5 +1,6 @@
 import type { HeaderResult } from './header-checker.interface';
 import type { TlsInfo } from './tls-info.interface';
+import type { DnsInfo } from './dns-info.interface';
 
 export interface ComplianceFinding {
   control: string;
@@ -31,4 +32,5 @@ export interface ScanResult {
   recommendations: string[];
   metadata: ScanMetadata;
   tls: TlsInfo;
+  dns: DnsInfo;
 }

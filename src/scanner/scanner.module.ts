@@ -4,6 +4,7 @@ import { ScannerController } from './scanner.controller';
 import { ScannerService } from './scanner.service';
 import { HttpClientService } from './http-client/http-client.service';
 import { TlsCheckerService } from './tls/tls-checker.service';
+import { DnsCheckerService } from './dns/dns-checker.service';
 import { ExportService } from '../report/export/export.service';
 import { AnalyzerModule } from '../analyzer/analyzer.module';
 import { ComplianceModule } from '../compliance/compliance.module';
@@ -20,7 +21,7 @@ import { ReportModule } from '../report/report.module';
     ReportModule,
   ],
   controllers: [ScannerController],
-  providers: [ScannerService, HttpClientService, TlsCheckerService, ExportService],
+  providers: [ScannerService, HttpClientService, TlsCheckerService, DnsCheckerService, ExportService],
   exports: [ScannerService],
 })
 export class ScannerModule {}

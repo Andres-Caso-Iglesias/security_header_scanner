@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { HttpClientService } from './http-client/http-client.service';
 import { TlsCheckerService } from './tls/tls-checker.service';
+import { DnsCheckerService } from './dns/dns-checker.service';
 import { AnalyzerService } from '../analyzer/analyzer.service';
 import { ComplianceService } from '../compliance/compliance.service';
 import { ReportService } from '../report/report.service';
@@ -11,6 +12,7 @@ export class ScannerService {
   constructor(
     private readonly httpClient: HttpClientService,
     private readonly tlsChecker: TlsCheckerService,
+    private readonly dnsChecker: DnsCheckerService,
     private readonly analyzer: AnalyzerService,
     private readonly compliance: ComplianceService,
     private readonly report: ReportService,
@@ -22,8 +24,8 @@ export class ScannerService {
     const port = parsedUrl.port ? parseInt(parsedUrl.port, 10) : 443;
     const protocol = parsedUrl.protocol;
 
-    // Run HTTP fetch and TLS check in parallel
-    const [httpResult, tlsResult] = await Promise.all([
+    // Run HTTP fetch, TLS check, and DNS check in parallel
+    const [httpResult, tlsResult, dnsResult] = await Promise.all([
       this.httpClient.fetch(url),
       protocol === 'https:' ? this.tlsChecker.check(hostname, port) : Promise.resolve({
         checked: false,
@@ -34,6 +36,7 @@ export class ScannerService {
         certificate: null,
         grade: 0,
       }),
+      this.dnsChecker.check(hostname),
     ]);
 
     const analysisResult = this.analyzer.analyze(httpResult.headers);
@@ -41,6 +44,7 @@ export class ScannerService {
     const complianceResult = this.compliance.evaluate(
       analysisResult.headers,
       tlsResult,
+      dnsResult,
     );
 
     const report = this.report.generate({
@@ -53,6 +57,7 @@ export class ScannerService {
         analyzedAt: new Date().toISOString(),
       },
       tls: tlsResult,
+      dns: dnsResult,
     });
 
     return report;

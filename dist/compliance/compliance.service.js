@@ -13,17 +13,17 @@ const nis2_mapper_1 = require("./mappers/nis2.mapper");
 let ComplianceService = class ComplianceService {
     owaspMapper = new owasp_top10_mapper_1.OwaspTop10Mapper();
     nis2Mapper = new nis2_mapper_1.Nis2Mapper();
-    evaluate(headers, tls) {
+    evaluate(headers, tls, dns) {
         return [
             {
                 framework: 'OWASP Top 10',
                 version: this.owaspMapper['version'],
-                findings: this.owaspMapper.map(headers, tls),
+                findings: this.owaspMapper.map(headers, tls, dns),
             },
             {
                 framework: 'NIS2 Directive',
                 version: this.nis2Mapper['version'],
-                findings: this.nis2Mapper.map(headers, tls),
+                findings: this.nis2Mapper.map(headers, tls, dns),
             },
         ];
     }

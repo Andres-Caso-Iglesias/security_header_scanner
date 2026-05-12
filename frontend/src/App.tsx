@@ -20,6 +20,25 @@ interface ComplianceFinding {
   recommendation: string
 }
 
+interface DnsRecord {
+  type: string
+  value: string
+  present: boolean
+  grade: number
+  finding: string
+  recommendation: string
+}
+
+interface DnsInfo {
+  hostname: string
+  checked: boolean
+  error: string | null
+  spf: DnsRecord
+  dkim: DnsRecord
+  dmarc: DnsRecord
+  grade: number
+}
+
 interface CertificateInfo {
   subject: string
   issuer: string
@@ -64,6 +83,7 @@ interface ScanResult {
     analyzedAt: string
   }
   tls: TlsInfo
+  dns: DnsInfo
 }
 
 function getGradeColor(grade: string): string {
@@ -296,6 +316,12 @@ function App() {
                 </span>
               </div>
               <div className="meta-row">
+                <span className="meta-label">DNS</span>
+                <span className="meta-value">
+                  {result.dns.error ? 'Error' : `SPF ${result.dns.spf.present ? 'OK' : '--'} DKIM ${result.dns.dkim.present ? 'OK' : '--'} DMARC ${result.dns.dmarc.present ? 'OK' : '--'}`}
+                </span>
+              </div>
+              <div className="meta-row">
                 <span className="meta-label">Recomendaciones</span>
                 <span className="meta-value">
                   {result.recommendations.length}
@@ -406,79 +432,110 @@ function App() {
             </div>
           </div>
 
-          <section className="section">
-            <h2>TLS / SSL</h2>
-            {result.tls.error ? (
-              <div className="error-banner">
-                {result.tls.error}
-              </div>
-            ) : (
-              <div className="tls-grid">
-                <div className="tls-card">
-                  <div className="tls-card-header">Conexion</div>
-                  <div className="tls-card-body">
-                    <div className="tls-row">
-                      <span className="tls-label">Version TLS</span>
-                      <span className="tls-value">{result.tls.tlsVersion || 'N/A'}</span>
-                    </div>
-                    <div className="tls-row">
-                      <span className="tls-label">Host</span>
-                      <span className="tls-value">{result.tls.hostname}:{result.tls.port}</span>
-                    </div>
-                    <div className="tls-row">
-                      <span className="tls-label">Grade</span>
-                      <span className={`tls-value tls-grade-${result.tls.grade >= 0.8 ? 'good' : result.tls.grade >= 0.5 ? 'warn' : 'bad'}`}>
-                        {Math.round(result.tls.grade * 100)}%
-                      </span>
-                    </div>
+          <div className="row-half">
+            <div className="col-half">
+              <section className="section">
+                <h2>TLS / SSL</h2>
+                {result.tls.error ? (
+                  <div className="error-banner">
+                    {result.tls.error}
                   </div>
-                </div>
-
-                {result.tls.certificate && (
-                  <>
+                ) : (
+                  <div className="tls-grid">
                     <div className="tls-card">
-                      <div className="tls-card-header">Certificado</div>
+                      <div className="tls-card-header">Conexion</div>
                       <div className="tls-card-body">
                         <div className="tls-row">
-                          <span className="tls-label">Sujeto</span>
-                          <span className="tls-value mono">{result.tls.certificate.subject}</span>
+                          <span className="tls-label">Version TLS</span>
+                          <span className="tls-value">{result.tls.tlsVersion || 'N/A'}</span>
                         </div>
                         <div className="tls-row">
-                          <span className="tls-label">Emisor</span>
-                          <span className="tls-value mono">{result.tls.certificate.issuer}</span>
+                          <span className="tls-label">Host</span>
+                          <span className="tls-value">{result.tls.hostname}:{result.tls.port}</span>
                         </div>
                         <div className="tls-row">
-                          <span className="tls-label">Valido desde</span>
-                          <span className="tls-value">{result.tls.certificate.validFrom}</span>
-                        </div>
-                        <div className="tls-row">
-                          <span className="tls-label">Valido hasta</span>
-                          <span className={`tls-value ${result.tls.certificate.expired ? 'tls-expired' : ''}`}>
-                            {result.tls.certificate.validTo}
-                            {result.tls.certificate.expired ? ' (EXPIRADO)' : result.tls.certificate.expiresInDays < 30 ? ` (${result.tls.certificate.expiresInDays} dias)` : ''}
+                          <span className="tls-label">Grade</span>
+                          <span className={`tls-value tls-grade-${result.tls.grade >= 0.8 ? 'good' : result.tls.grade >= 0.5 ? 'warn' : 'bad'}`}>
+                            {Math.round(result.tls.grade * 100)}%
                           </span>
                         </div>
-                        <div className="tls-row">
-                          <span className="tls-label">Self-signed</span>
-                          <span className="tls-value">{result.tls.certificate.selfSigned ? 'Si' : 'No'}</span>
-                        </div>
-                        <div className="tls-row">
-                          <span className="tls-label">Wildcard</span>
-                          <span className="tls-value">{result.tls.certificate.wildcard ? 'Si' : 'No'}</span>
-                        </div>
-                        {result.tls.certificate.san.length > 0 && (
-                          <div className="tls-row">
-                            <span className="tls-label">SAN</span>
-                            <span className="tls-value mono">{result.tls.certificate.san.slice(0, 5).join(', ')}{result.tls.certificate.san.length > 5 ? '...' : ''}</span>
-                          </div>
-                        )}
                       </div>
                     </div>
-                  </>
+
+                    {result.tls.certificate && (
+                      <>
+                        <div className="tls-card">
+                          <div className="tls-card-header">Certificado</div>
+                          <div className="tls-card-body">
+                            <div className="tls-row">
+                              <span className="tls-label">Sujeto</span>
+                              <span className="tls-value mono">{result.tls.certificate.subject}</span>
+                            </div>
+                            <div className="tls-row">
+                              <span className="tls-label">Emisor</span>
+                              <span className="tls-value mono">{result.tls.certificate.issuer}</span>
+                            </div>
+                            <div className="tls-row">
+                              <span className="tls-label">Valido desde</span>
+                              <span className="tls-value">{result.tls.certificate.validFrom}</span>
+                            </div>
+                            <div className="tls-row">
+                              <span className="tls-label">Valido hasta</span>
+                              <span className={`tls-value ${result.tls.certificate.expired ? 'tls-expired' : ''}`}>
+                                {result.tls.certificate.validTo}
+                                {result.tls.certificate.expired ? ' (EXPIRADO)' : result.tls.certificate.expiresInDays < 30 ? ` (${result.tls.certificate.expiresInDays} dias)` : ''}
+                              </span>
+                            </div>
+                            <div className="tls-row">
+                              <span className="tls-label">Self-signed</span>
+                              <span className="tls-value">{result.tls.certificate.selfSigned ? 'Si' : 'No'}</span>
+                            </div>
+                            <div className="tls-row">
+                              <span className="tls-label">Wildcard</span>
+                              <span className="tls-value">{result.tls.certificate.wildcard ? 'Si' : 'No'}</span>
+                            </div>
+                            {result.tls.certificate.san.length > 0 && (
+                              <div className="tls-row">
+                                <span className="tls-label">SAN</span>
+                                <span className="tls-value mono">{result.tls.certificate.san.slice(0, 5).join(', ')}{result.tls.certificate.san.length > 5 ? '...' : ''}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 )}
-              </div>
-            )}
-          </section>
+              </section>
+            </div>
+
+            <div className="col-half">
+              <section className="section">
+                <h2>DNS / Email Security</h2>
+                {result.dns.error ? (
+                  <div className="error-banner">{result.dns.error}</div>
+                ) : (
+                  <div className="dns-grid">
+                    {[result.dns.spf, result.dns.dkim, result.dns.dmarc].map((record) => (
+                      <div key={record.type} className={`dns-card grade-${record.grade >= 1 ? 'good' : record.grade >= 0.5 ? 'warn' : 'bad'}`}>
+                        <div className="dns-card-header">
+                          <span className="dns-type">{record.type}</span>
+                          <span className="dns-status">{record.present ? 'Configurado' : 'AUSENTE'}</span>
+                        </div>
+                        {record.value && (
+                          <div className="dns-value">{record.value}</div>
+                        )}
+                        <p className="dns-finding">{record.finding}</p>
+                        {record.grade < 1.0 && (
+                          <p className="dns-rec">{record.recommendation}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </div>
+          </div>
 
           {result.recommendations.length > 0 && (
             <section className="section">

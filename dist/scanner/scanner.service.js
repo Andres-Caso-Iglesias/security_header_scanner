@@ -13,18 +13,21 @@ exports.ScannerService = void 0;
 const common_1 = require("@nestjs/common");
 const http_client_service_1 = require("./http-client/http-client.service");
 const tls_checker_service_1 = require("./tls/tls-checker.service");
+const dns_checker_service_1 = require("./dns/dns-checker.service");
 const analyzer_service_1 = require("../analyzer/analyzer.service");
 const compliance_service_1 = require("../compliance/compliance.service");
 const report_service_1 = require("../report/report.service");
 let ScannerService = class ScannerService {
     httpClient;
     tlsChecker;
+    dnsChecker;
     analyzer;
     compliance;
     report;
-    constructor(httpClient, tlsChecker, analyzer, compliance, report) {
+    constructor(httpClient, tlsChecker, dnsChecker, analyzer, compliance, report) {
         this.httpClient = httpClient;
         this.tlsChecker = tlsChecker;
+        this.dnsChecker = dnsChecker;
         this.analyzer = analyzer;
         this.compliance = compliance;
         this.report = report;
@@ -34,7 +37,7 @@ let ScannerService = class ScannerService {
         const hostname = parsedUrl.hostname;
         const port = parsedUrl.port ? parseInt(parsedUrl.port, 10) : 443;
         const protocol = parsedUrl.protocol;
-        const [httpResult, tlsResult] = await Promise.all([
+        const [httpResult, tlsResult, dnsResult] = await Promise.all([
             this.httpClient.fetch(url),
             protocol === 'https:' ? this.tlsChecker.check(hostname, port) : Promise.resolve({
                 checked: false,
@@ -45,9 +48,10 @@ let ScannerService = class ScannerService {
                 certificate: null,
                 grade: 0,
             }),
+            this.dnsChecker.check(hostname),
         ]);
         const analysisResult = this.analyzer.analyze(httpResult.headers);
-        const complianceResult = this.compliance.evaluate(analysisResult.headers, tlsResult);
+        const complianceResult = this.compliance.evaluate(analysisResult.headers, tlsResult, dnsResult);
         const report = this.report.generate({
             url,
             headers: analysisResult,
@@ -58,6 +62,7 @@ let ScannerService = class ScannerService {
                 analyzedAt: new Date().toISOString(),
             },
             tls: tlsResult,
+            dns: dnsResult,
         });
         return report;
     }
@@ -67,6 +72,7 @@ exports.ScannerService = ScannerService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [http_client_service_1.HttpClientService,
         tls_checker_service_1.TlsCheckerService,
+        dns_checker_service_1.DnsCheckerService,
         analyzer_service_1.AnalyzerService,
         compliance_service_1.ComplianceService,
         report_service_1.ReportService])
