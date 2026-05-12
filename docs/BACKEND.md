@@ -251,6 +251,39 @@ Mapea a 4 controles del Articulo 21 de la Directiva NIS2 2023:
 | Art.21(g) - Supply Chain Security | CORP, COEP | Permisivo = partially_compliant |
 | Art.21(i) - Cryptography | HSTS, TLS info (version, cert) | Sin HSTS = non_compliant. Evalua TLS version real, expiracion de certificado, self-signed. HTTP sin TLS = non_compliant |
 
+### Export Service
+
+Servicio para exportar reportes en formatos descargables.
+
+**Ubicacion:** `src/report/export/export.service.ts`
+
+**Metodos:**
+
+| Metodo | Formato | Descripcion |
+|--------|---------|-------------|
+| `generateJson(result)` | JSON | Serializa el ScanResult como JSON indentado |
+| `generatePdf(result)` | PDF | Genera un documento PDF profesional utilizando `pdfkit` |
+
+**Endpoint:** `POST /api/export`
+
+**Estructura del PDF generado:**
+1. **Header** - titulo, URL, fecha, metadata duracion/status
+2. **Score** - Grado y puntaje con descripcion visual y texto explicativo
+3. **TLS/SSL** - Version TLS, grade, datos del certificado (sujeto, emisor, validez, SAN)
+4. **Headers de Seguridad** - Lista de los 15 headers con severidad, grade, hallazgo y recomendacion
+5. **Cumplimiento Normativo** - OWASP Top 10 y NIS2 con estados coloreados
+6. **Recomendaciones** - Lista priorizada por severidad (CRITICAL primero)
+7. **Footer** - Fecha de generacion y version de la herramienta
+
+**Endpoint:** `POST /api/export`
+
+**Request:**
+```json
+{ "url": "https://example.com", "format": "pdf" }
+```
+
+**Response:** Archivo descargable con headers `Content-Disposition: attachment` y `Content-Type` adecuado.
+
 ### Report Module
 
 Genera la respuesta JSON final.

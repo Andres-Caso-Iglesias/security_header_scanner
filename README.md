@@ -140,6 +140,26 @@ npm run test:cov
 
 ## API Reference
 
+### POST /api/export
+
+Escanea una URL y descarga el reporte en formato PDF o JSON.
+
+**Request body:**
+```json
+{
+  "url": "https://example.com",
+  "format": "pdf"
+}
+```
+
+**Formatos:**
+| Formato | Content-Type | Uso |
+|---------|-------------|-----|
+| `json` | application/json | Procesamiento automatico, integracion con herramientas |
+| `pdf` | application/pdf | Evidencia tecnica para audits, compliance, informes |
+
+**Response:** Archivo descargable con `Content-Disposition: attachment`.
+
 ### POST /api/scan
 
 Escanea una URL y devuelve un reporte de seguridad.

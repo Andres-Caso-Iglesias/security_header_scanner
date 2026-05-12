@@ -151,6 +151,7 @@ function App() {
   const [result, setResult] = useState<ScanResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [exporting, setExporting] = useState<'pdf' | 'json' | null>(null)
 
   async function handleScan() {
     if (!url.trim()) return
@@ -191,6 +192,32 @@ function App() {
     await navigator.clipboard.writeText(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  async function downloadReport(format: 'pdf' | 'json') {
+    if (!result || !url.trim()) return
+    setExporting(format)
+    try {
+      const res = await fetch('/api/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url.trim(), format }),
+      })
+      if (!res.ok) throw new Error(`Export failed: ${res.status}`)
+      const blob = await res.blob()
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      const ext = format === 'pdf' ? 'pdf' : 'json'
+      link.download = `auditoria-${url.trim().replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40)}-${new Date().toISOString().slice(0, 10)}.${ext}`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(link.href)
+    } catch (e) {
+      setError(`Error al descargar: ${(e as Error).message}`)
+    } finally {
+      setExporting(null)
+    }
   }
 
   return (
@@ -275,9 +302,17 @@ function App() {
                 </span>
               </div>
             </div>
+          </div>
 
+          <div className="export-buttons">
             <button className="copy-button" onClick={copyReport}>
-              {copied ? '✓ Copiado' : '📋 Copiar Reporte'}
+              {copied ? 'Copiado' : 'Copiar JSON'}
+            </button>
+            <button className="export-btn export-json" onClick={() => downloadReport('json')} disabled={exporting !== null}>
+              {exporting === 'json' ? 'Descargando...' : 'Descargar JSON'}
+            </button>
+            <button className="export-btn export-pdf" onClick={() => downloadReport('pdf')} disabled={exporting !== null}>
+              {exporting === 'pdf' ? 'Generando PDF...' : 'Descargar PDF'}
             </button>
           </div>
 

@@ -16,15 +16,37 @@ exports.ScannerController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const scanner_service_1 = require("./scanner.service");
+const export_service_1 = require("../report/export/export.service");
 const scan_request_dto_1 = require("./dto/scan-request.dto");
+const export_request_dto_1 = require("./dto/export-request.dto");
 const scan_response_dto_1 = require("./dto/scan-response.dto");
 let ScannerController = class ScannerController {
     scannerService;
-    constructor(scannerService) {
+    exportService;
+    constructor(scannerService, exportService) {
         this.scannerService = scannerService;
+        this.exportService = exportService;
     }
     async scan(body) {
         return this.scannerService.scan(body.url);
+    }
+    async export(body, res) {
+        const result = await this.scannerService.scan(body.url);
+        const sanitizedUrl = body.url.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40);
+        const timestamp = new Date().toISOString().slice(0, 10);
+        res.status(common_1.HttpStatus.OK);
+        if (body.format === 'json') {
+            const json = this.exportService.generateJson(result);
+            res.setHeader('Content-Type', 'application/json');
+            res.setHeader('Content-Disposition', `attachment; filename="auditoria-${sanitizedUrl}-${timestamp}.json"`);
+            res.send(json);
+        }
+        else {
+            const pdfBuffer = await this.exportService.generatePdf(result);
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="auditoria-${sanitizedUrl}-${timestamp}.pdf"`);
+            res.send(pdfBuffer);
+        }
     }
 };
 exports.ScannerController = ScannerController;
@@ -54,9 +76,35 @@ __decorate([
     __metadata("design:paramtypes", [scan_request_dto_1.ScanRequestDto]),
     __metadata("design:returntype", Promise)
 ], ScannerController.prototype, "scan", null);
+__decorate([
+    (0, common_1.Post)('export'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Scan a URL and export the report as PDF or JSON',
+        description: 'Performs a full security scan and returns the report as a downloadable file in the requested format (PDF or JSON).',
+    }),
+    (0, swagger_1.ApiBody)({ type: export_request_dto_1.ExportRequestDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'File downloaded successfully',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 400,
+        description: 'Invalid URL or format provided',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 502,
+        description: 'Failed to reach target URL',
+    }),
+    __param(0, (0, common_1.Body)(new common_1.ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [export_request_dto_1.ExportRequestDto, Object]),
+    __metadata("design:returntype", Promise)
+], ScannerController.prototype, "export", null);
 exports.ScannerController = ScannerController = __decorate([
     (0, swagger_1.ApiTags)('Scanner'),
     (0, common_1.Controller)('api'),
-    __metadata("design:paramtypes", [scanner_service_1.ScannerService])
+    __metadata("design:paramtypes", [scanner_service_1.ScannerService,
+        export_service_1.ExportService])
 ], ScannerController);
 //# sourceMappingURL=scanner.controller.js.map

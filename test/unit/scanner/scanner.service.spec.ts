@@ -5,6 +5,7 @@ import { TlsCheckerService } from '../../../src/scanner/tls/tls-checker.service'
 import { AnalyzerService } from '../../../src/analyzer/analyzer.service';
 import { ComplianceService } from '../../../src/compliance/compliance.service';
 import { ReportService } from '../../../src/report/report.service';
+import { ExportService } from '../../../src/report/export/export.service';
 import { ScoreCalculator } from '../../../src/analyzer/score-calculator';
 
 describe('ScannerService', () => {
