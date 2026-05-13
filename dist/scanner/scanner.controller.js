@@ -11,9 +11,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScannerController = void 0;
 const common_1 = require("@nestjs/common");
+const express_1 = require("express");
 const swagger_1 = require("@nestjs/swagger");
 const scanner_service_1 = require("./scanner.service");
 const export_service_1 = require("../report/export/export.service");
@@ -98,7 +100,7 @@ __decorate([
     __param(0, (0, common_1.Body)(new common_1.ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))),
     __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [export_request_dto_1.ExportRequestDto, Object]),
+    __metadata("design:paramtypes", [export_request_dto_1.ExportRequestDto, typeof (_a = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _a : Object]),
     __metadata("design:returntype", Promise)
 ], ScannerController.prototype, "export", null);
 exports.ScannerController = ScannerController = __decorate([

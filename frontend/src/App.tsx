@@ -248,6 +248,7 @@ function App() {
   const [exporting, setExporting] = useState<'pdf' | 'json' | null>(null)
   const [expandedSri, setExpandedSri] = useState<Set<number>>(new Set())
   const [expandedRec, setExpandedRec] = useState<Set<string>>(new Set())
+  const [showSriDetails, setShowSriDetails] = useState(false)
 
   function toggleSri(i: number) {
     setExpandedSri((prev) => {
@@ -453,39 +454,19 @@ function App() {
                 <h2>Headers de Seguridad</h2>
                 <div className="header-grid">
                   {result.headers.map((h) => (
-                    <div
-                      key={h.header}
-                      className={`header-card severity-${h.severity}`}
-                    >
+                    <div key={h.header} className={`header-card severity-${h.severity}`}>
                       <div className="header-card-top">
                         <span className="header-name">{h.header}</span>
-                        <span
-                          className="header-grade"
-                          style={{ color: getSeverityColor(h.severity) }}
-                        >
-                          {h.grade === 1
-                            ? '✓'
-                            : h.grade > 0.5
-                              ? '⚠'
-                              : h.grade > 0
-                                ? '✗'
-                                : '✗'}
+                        <span className="header-grade" style={{ color: getSeverityColor(h.severity) }}>
+                          {h.grade === 1 ? '✓' : h.grade > 0.5 ? '⚠' : '✗'}
                         </span>
                       </div>
                       <div className="header-grade-bar">
-                        <div
-                          className="grade-fill"
-                          style={{
-                            width: `${h.grade * 100}%`,
-                            backgroundColor: getSeverityColor(h.severity),
-                          }}
-                        />
+                        <div className="grade-fill" style={{ width: `${h.grade * 100}%`, backgroundColor: getSeverityColor(h.severity) }} />
                       </div>
                       <div className="header-card-info">
                         <span className="severity-badge">{h.severity}</span>
-                        <span className="grade-value">
-                          {Math.round(h.grade * 100)}%
-                        </span>
+                        <span className="grade-value">{Math.round(h.grade * 100)}%</span>
                       </div>
                       <p className="header-finding">{h.finding}</p>
                       <p className="header-rec">{h.recommendation}</p>
@@ -493,128 +474,39 @@ function App() {
                   ))}
                 </div>
               </section>
-            </div>
 
-            <div className="column-side">
-              <section className="section">
-                <h2>Cumplimiento Normativo</h2>
-                {result.compliance.map((comp) => (
-                  <div key={comp.framework} className="compliance-section">
-                    <h3>
-                      {comp.framework} v{comp.version}
-                    </h3>
-                    <div className="compliance-grid">
-                      {comp.findings.map((f) => (
-                        <div
-                          key={f.control}
-                          className={`compliance-card status-${f.status}`}
-                        >
-                          <div className="compliance-card-header">
-                            <span className="compliance-control">
-                          {f.control}
-                        </span>
-                        <span
-                          className="compliance-status"
-                          style={{ color: getStatusColor(f.status) }}
-                        >
-                          {formatStatus(f.status)}
-                        </span>
-                      </div>
-                      <p className="compliance-desc">{f.description}</p>
-                      <p className="compliance-rec">{f.recommendation}</p>
-                      {f.relatedHeaders.length > 0 && (
-                        <div className="related-headers">
-                          <small>Headers relacionados: </small>
-                          {f.relatedHeaders.join(', ')}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </section>
-            </div>
-          </div>
-
-          <div className="row-half">
-            <div className="col-half">
               <section className="section">
                 <h2>TLS / SSL</h2>
                 {result.tls.error ? (
-                  <div className="error-banner">
-                    {result.tls.error}
-                  </div>
+                  <div className="error-banner">{result.tls.error}</div>
                 ) : (
                   <div className="tls-grid">
                     <div className="tls-card">
                       <div className="tls-card-header">Conexion</div>
                       <div className="tls-card-body">
-                        <div className="tls-row">
-                          <span className="tls-label">Version TLS</span>
-                          <span className="tls-value">{result.tls.tlsVersion || 'N/A'}</span>
-                        </div>
-                        <div className="tls-row">
-                          <span className="tls-label">Host</span>
-                          <span className="tls-value">{result.tls.hostname}:{result.tls.port}</span>
-                        </div>
-                        <div className="tls-row">
-                          <span className="tls-label">Grade</span>
-                          <span className={`tls-value tls-grade-${result.tls.grade >= 0.8 ? 'good' : result.tls.grade >= 0.5 ? 'warn' : 'bad'}`}>
-                            {Math.round(result.tls.grade * 100)}%
-                          </span>
-                        </div>
+                        <div className="tls-row"><span className="tls-label">Version TLS</span><span className="tls-value">{result.tls.tlsVersion || 'N/A'}</span></div>
+                        <div className="tls-row"><span className="tls-label">Host</span><span className="tls-value">{result.tls.hostname}:{result.tls.port}</span></div>
+                        <div className="tls-row"><span className="tls-label">Grade</span><span className={`tls-value tls-grade-${result.tls.grade >= 0.8 ? 'good' : result.tls.grade >= 0.5 ? 'warn' : 'bad'}`}>{Math.round(result.tls.grade * 100)}%</span></div>
                       </div>
                     </div>
-
                     {result.tls.certificate && (
-                      <>
-                        <div className="tls-card">
-                          <div className="tls-card-header">Certificado</div>
-                          <div className="tls-card-body">
-                            <div className="tls-row">
-                              <span className="tls-label">Sujeto</span>
-                              <span className="tls-value mono">{result.tls.certificate.subject}</span>
-                            </div>
-                            <div className="tls-row">
-                              <span className="tls-label">Emisor</span>
-                              <span className="tls-value mono">{result.tls.certificate.issuer}</span>
-                            </div>
-                            <div className="tls-row">
-                              <span className="tls-label">Valido desde</span>
-                              <span className="tls-value">{result.tls.certificate.validFrom}</span>
-                            </div>
-                            <div className="tls-row">
-                              <span className="tls-label">Valido hasta</span>
-                              <span className={`tls-value ${result.tls.certificate.expired ? 'tls-expired' : ''}`}>
-                                {result.tls.certificate.validTo}
-                                {result.tls.certificate.expired ? ' (EXPIRADO)' : result.tls.certificate.expiresInDays < 30 ? ` (${result.tls.certificate.expiresInDays} dias)` : ''}
-                              </span>
-                            </div>
-                            <div className="tls-row">
-                              <span className="tls-label">Self-signed</span>
-                              <span className="tls-value">{result.tls.certificate.selfSigned ? 'Si' : 'No'}</span>
-                            </div>
-                            <div className="tls-row">
-                              <span className="tls-label">Wildcard</span>
-                              <span className="tls-value">{result.tls.certificate.wildcard ? 'Si' : 'No'}</span>
-                            </div>
-                            {result.tls.certificate.san.length > 0 && (
-                              <div className="tls-row">
-                                <span className="tls-label">SAN</span>
-                                <span className="tls-value mono">{result.tls.certificate.san.slice(0, 5).join(', ')}{result.tls.certificate.san.length > 5 ? '...' : ''}</span>
-                              </div>
-                            )}
-                          </div>
+                      <div className="tls-card">
+                        <div className="tls-card-header">Certificado</div>
+                        <div className="tls-card-body">
+                          <div className="tls-row"><span className="tls-label">Sujeto</span><span className="tls-value mono">{result.tls.certificate.subject}</span></div>
+                          <div className="tls-row"><span className="tls-label">Emisor</span><span className="tls-value mono">{result.tls.certificate.issuer}</span></div>
+                          <div className="tls-row"><span className="tls-label">Valido desde</span><span className="tls-value">{result.tls.certificate.validFrom}</span></div>
+                          <div className="tls-row"><span className="tls-label">Valido hasta</span><span className={`tls-value ${result.tls.certificate.expired ? 'tls-expired' : ''}`}>{result.tls.certificate.validTo}{result.tls.certificate.expired ? ' (EXPIRADO)' : result.tls.certificate.expiresInDays < 30 ? ` (${result.tls.certificate.expiresInDays} dias)` : ''}</span></div>
+                          <div className="tls-row"><span className="tls-label">Self-signed</span><span className="tls-value">{result.tls.certificate.selfSigned ? 'Si' : 'No'}</span></div>
+                          <div className="tls-row"><span className="tls-label">Wildcard</span><span className="tls-value">{result.tls.certificate.wildcard ? 'Si' : 'No'}</span></div>
+                          {result.tls.certificate.san.length > 0 && <div className="tls-row"><span className="tls-label">SAN</span><span className="tls-value mono">{result.tls.certificate.san.slice(0, 5).join(', ')}{result.tls.certificate.san.length > 5 ? '...' : ''}</span></div>}
                         </div>
-                      </>
+                      </div>
                     )}
                   </div>
                 )}
               </section>
-            </div>
 
-            <div className="col-half">
               <section className="section">
                 <h2>DNS / Email Security</h2>
                 {result.dns.error ? (
@@ -623,27 +515,16 @@ function App() {
                   <div className="dns-grid">
                     {[result.dns.spf, result.dns.dkim, result.dns.dmarc].map((record) => (
                       <div key={record.type} className={`dns-card grade-${record.grade >= 1 ? 'good' : record.grade >= 0.5 ? 'warn' : 'bad'}`}>
-                        <div className="dns-card-header">
-                          <span className="dns-type">{record.type}</span>
-                          <span className="dns-status">{record.present ? 'Configurado' : 'AUSENTE'}</span>
-                        </div>
-                        {record.value && (
-                          <div className="dns-value">{record.value}</div>
-                        )}
+                        <div className="dns-card-header"><span className="dns-type">{record.type}</span><span className="dns-status">{record.present ? 'Configurado' : 'AUSENTE'}</span></div>
+                        {record.value && <div className="dns-value">{record.value}</div>}
                         <p className="dns-finding">{record.finding}</p>
-                        {record.grade < 1.0 && (
-                          <p className="dns-rec">{record.recommendation}</p>
-                        )}
+                        {record.grade < 1.0 && <p className="dns-rec">{record.recommendation}</p>}
                       </div>
                     ))}
                   </div>
                 )}
               </section>
-            </div>
-          </div>
 
-          <div className="row-half">
-            <div className="col-half">
               <section className="section">
                 <h2>Archivos de Seguridad</h2>
                 <div className="security-files-grid">
@@ -651,33 +532,23 @@ function App() {
                     <div key={file.path} className={`security-card ${file.present ? 'found' : 'missing'}`}>
                       <div className="security-card-header">
                         <span className="security-path">{file.path}</span>
-                        <span className={`security-status ${file.present ? 'status-ok' : 'status-missing'}`}>
-                          {file.present ? 'Encontrado' : 'No encontrado'}
-                        </span>
+                        <span className={`security-status ${file.present ? 'status-ok' : 'status-missing'}`}>{file.present ? 'Encontrado' : 'No encontrado'}</span>
                       </div>
-                      {file.content && (
-                        <pre className="security-content">{file.content}</pre>
-                      )}
+                      {file.content && <pre className="security-content">{file.content}</pre>}
                       <p className="security-finding">{file.finding}</p>
-                      {file.grade < 1.0 && (
-                        <p className="security-rec">{file.recommendation}</p>
-                      )}
+                      {file.grade < 1.0 && <p className="security-rec">{file.recommendation}</p>}
                     </div>
                   ))}
                 </div>
               </section>
-            </div>
 
-            <div className="col-half">
               <section className="section">
                 <h2>Archivos Sensibles</h2>
                 {result.sensitiveFiles.exposedCount === 0 ? (
                   <p className="no-data">No se detectaron archivos sensibles expuestos.</p>
                 ) : (
                   <div>
-                    <div className="sens-warning">
-                      <strong>{result.sensitiveFiles.exposedCount} archivo(s) sensible(s) expuesto(s)</strong>
-                    </div>
+                    <div className="sens-warning"><strong>{result.sensitiveFiles.exposedCount} archivo(s) sensible(s) expuesto(s)</strong></div>
                     <div className="sens-list">
                       {result.sensitiveFiles.files.filter((f) => f.exposed).map((f, i) => (
                         <div key={i} className="sens-item">
@@ -688,6 +559,30 @@ function App() {
                     </div>
                   </div>
                 )}
+              </section>
+            </div>
+
+            <div className="column-side">
+              <section className="section">
+                <h2>Cumplimiento Normativo</h2>
+                {result.compliance.map((comp) => (
+                  <div key={comp.framework} className="compliance-section">
+                    <h3>{comp.framework} v{comp.version}</h3>
+                    <div className="compliance-grid">
+                      {comp.findings.map((f) => (
+                        <div key={f.control} className={`compliance-card status-${f.status}`}>
+                          <div className="compliance-card-header">
+                            <span className="compliance-control">{f.control}</span>
+                            <span className="compliance-status" style={{ color: getStatusColor(f.status) }}>{formatStatus(f.status)}</span>
+                          </div>
+                          <p className="compliance-desc">{f.description}</p>
+                          <p className="compliance-rec">{f.recommendation}</p>
+                          {f.relatedHeaders.length > 0 && <div className="related-headers"><small>Headers relacionados: </small>{f.relatedHeaders.join(', ')}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </section>
             </div>
           </div>
@@ -706,19 +601,26 @@ function App() {
                     </div>
                     <p className="sri-finding">{result.sri.finding}</p>
                     {result.sri.insecureResources.length > 0 && (
-                      <>
-                        <p className="sri-rec">{result.sri.recommendation}</p>
-                        <div className="sri-list">
-                          {result.sri.insecureResources.map((r, i) => (
-                            <div key={i} className="sri-item">
-                              <span className="sri-tag">{r.tag}</span>
-                              <span className={`sri-src ${!expandedSri.has(i) ? 'truncated' : ''}`} onClick={() => toggleSri(i)}>
-                                {r.src}
-                              </span>
+                      <div className="sri-collapse">
+                        <span className="sri-toggle" onClick={() => setShowSriDetails(!showSriDetails)}>
+                          {showSriDetails ? 'Ocultar' : 'Mostrar'} recursos sin integrity ({result.sri.insecureResources.length})
+                        </span>
+                        {showSriDetails && (
+                          <>
+                            <p className="sri-rec">{result.sri.recommendation}</p>
+                            <div className="sri-list">
+                              {result.sri.insecureResources.map((r, i) => (
+                                <div key={i} className="sri-item">
+                                  <span className="sri-tag">{r.tag}</span>
+                                  <span className={`sri-src ${!expandedSri.has(i) ? 'truncated' : ''}`} onClick={() => toggleSri(i)}>
+                                    {r.src}
+                                  </span>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      </>
+                          </>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}

@@ -57,6 +57,8 @@ export class ScannerService {
       analysisResult.headers,
       tlsResult,
       dnsResult,
+      securityFilesResult,
+      fingerprintResult,
     );
 
     const report = this.report.generate({

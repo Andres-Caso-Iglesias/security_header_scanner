@@ -885,6 +885,21 @@ body {
   margin-bottom: 0.5rem;
 }
 
+.sri-collapse {
+  margin-top: 0.5rem;
+}
+
+.sri-toggle {
+  font-size: 0.8rem;
+  color: #3b82f6;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sri-toggle:hover {
+  text-decoration: underline;
+}
+
 .sri-rec {
   font-size: 0.8rem;
   color: #94a3b8;

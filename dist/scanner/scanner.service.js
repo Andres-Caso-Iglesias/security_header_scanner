@@ -66,7 +66,7 @@ let ScannerService = class ScannerService {
             this.analyzer.analyze(httpResult.headers),
             this.techFingerprinter.fingerprint(httpResult.headers, url),
         ]);
-        const complianceResult = this.compliance.evaluate(analysisResult.headers, tlsResult, dnsResult);
+        const complianceResult = this.compliance.evaluate(analysisResult.headers, tlsResult, dnsResult, securityFilesResult, fingerprintResult);
         const report = this.report.generate({
             url,
             headers: analysisResult,

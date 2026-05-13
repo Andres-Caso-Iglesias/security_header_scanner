@@ -10,10 +10,14 @@ exports.ComplianceService = void 0;
 const common_1 = require("@nestjs/common");
 const owasp_top10_mapper_1 = require("./mappers/owasp-top10.mapper");
 const nis2_mapper_1 = require("./mappers/nis2.mapper");
+const ens_mapper_1 = require("./mappers/ens.mapper");
+const iso27001_mapper_1 = require("./mappers/iso27001.mapper");
 let ComplianceService = class ComplianceService {
     owaspMapper = new owasp_top10_mapper_1.OwaspTop10Mapper();
     nis2Mapper = new nis2_mapper_1.Nis2Mapper();
-    evaluate(headers, tls, dns) {
+    ensMapper = new ens_mapper_1.EnsMapper();
+    iso27001Mapper = new iso27001_mapper_1.Iso27001Mapper();
+    evaluate(headers, tls, dns, securityFiles, fingerprint) {
         return [
             {
                 framework: 'OWASP Top 10',
@@ -24,6 +28,16 @@ let ComplianceService = class ComplianceService {
                 framework: 'NIS2 Directive',
                 version: this.nis2Mapper['version'],
                 findings: this.nis2Mapper.map(headers, tls, dns),
+            },
+            {
+                framework: 'ENS',
+                version: this.ensMapper['version'],
+                findings: this.ensMapper.map(headers, tls, dns),
+            },
+            {
+                framework: 'ISO 27001',
+                version: this.iso27001Mapper['version'],
+                findings: this.iso27001Mapper.map(headers, tls, dns),
             },
         ];
     }

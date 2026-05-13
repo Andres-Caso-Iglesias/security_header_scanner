@@ -164,10 +164,13 @@ La seccion de resultados utiliza un layout de ancho completo:
 |  |  .column-main (flex: 2)    | .column-side (flex: 1)     | |
 |  |  Headers de Seguridad      | Cumplimiento Normativo     | |
 |  |  3 tarjetas por fila       | OWASP + NIS2              | |
-|  +----------------------------+----------------------------+ |
-|  |  TLS / SSL (col-half)      | DNS / Email (col-half)    | |
-|  |  Conexion + Certificado    | SPF + DKIM + DMARC        | |
-|  +----------------------------+----------------------------+ |
+|  +--------------------------------------------------------+ |
+|  |  TLS / SSL (full-width, centrado)                       | |
+|  |  Conexion + Certificado                                 | |
+|  +--------------------------------------------------------+ |
+|  |  DNS / Email Security (full-width, centrado)             | |
+|  |  SPF + DKIM + DMARC                                     | |
+|  +--------------------------------------------------------+ |
 |  |  Security Files (col-half)  | Sensitive Files (col-half)| |
 |  |  security.txt + robots.txt  | .env, .git, config, etc.  | |
 |  +----------------------------+----------------------------+ |
