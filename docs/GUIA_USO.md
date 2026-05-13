@@ -110,7 +110,9 @@ Recomendacion: Remove unsafe directives. Consider using nonces or hashes.
 
 ### Cumplimiento Normativo
 
-El reporte incluye dos secciones de compliance:
+El reporte incluye cuatro secciones de compliance:
+
+Los 4 frameworks evaluados son: OWASP Top 10, NIS2 Directive, ENS (Esquema Nacional de Seguridad) e ISO 27001.
 
 #### OWASP Top 10 (2021)
 
@@ -119,6 +121,31 @@ El reporte incluye dos secciones de compliance:
 | A01 - Broken Access Control | CORS, cookies | Evalua si hay controles de acceso debiles que permitan acceso no autorizado |
 | A05 - Security Misconfiguration | Headers de seguridad, TLS/SSL, SPF/DKIM/DMARC, security.txt, robots.txt | Evalua si faltan headers de seguridad esenciales, TLS desactualizado, certificados expirados, registros DNS de correo ausentes, archivos de seguridad faltantes o mal configurados |
 | A06 - Vulnerable Components | X-Powered-By, Server | Evalua si el sitio expone informacion sobre tecnologias que podrian tener vulnerabilidades conocidas |
+
+#### ENS - Esquema Nacional de Seguridad (RD 311/2022)
+
+| Control | Evalua | Que significa |
+|---------|--------|---------------|
+| op.acc.2 - Control de acceso | CORS, COOP, cookies | Verifica que no haya accesos cruzados sin restriccion |
+| op.exp.5 - Proteccion de informacion | X-Powered-By, Server | Detecta fugas de informacion tecnologica |
+| op.pl.3 - Seguridad perimetral | CSP, HSTS, XFO | Evalua las defensas del perimetro web |
+| op.mon.2 - Monitorizacion | DMARC | Capacidad de deteccion de incidentes de correo |
+| op.cont.2 - Continuidad | TLS cert expiry | Renovacion de certificados y continuidad del servicio |
+| org.organizacion - Marco organizativo | security.txt | Publicacion de canal de divulgacion de vulnerabilidades |
+| op.vuln - Gestion de vulnerabilidades | Fingerprinting, CVEs | Identificacion y parcheado de tecnologias vulnerables |
+
+#### ISO 27001 (2022)
+
+| Control | Evalua | Que significa |
+|---------|--------|---------------|
+| A.5.1 - Politicas de seguridad | security.txt | Existencia de politica de divulgacion |
+| A.9.1 - Control de acceso | CORS, COOP | Restriccion de accesos cross-origin |
+| A.10.1 - Controles criptograficos | HSTS, TLS | Cifrado de comunicaciones |
+| A.12.6 - Gestion de vulnerabilidades | CVEs | Vulnerabilidades conocidas sin parchear |
+| A.13.1 - Seguridad de redes | CSP, XFO, XCTO | Defensa perimetral de red |
+| A.13.2 - Transferencia de informacion | TLS | Cifrado en transferencia de datos |
+| A.16.1 - Gestion de incidentes | CSP reporting, DMARC | Mecanismos de deteccion |
+| A.18.1 - Cumplimiento normativo | General | Estado de cumplimiento global |
 
 #### NIS2 Directive (2023) - Articulo 21
 

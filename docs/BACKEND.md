@@ -389,6 +389,39 @@ Mapea a 4 controles del Articulo 21 de la Directiva NIS2 2023:
 | Art.21(g) - Supply Chain Security | CORP, COEP | Permisivo = partially_compliant |
 | Art.21(i) - Cryptography | HSTS, TLS info (version, cert) | Sin HSTS = non_compliant. Evalua TLS version real, expiracion de certificado, self-signed. HTTP sin TLS = non_compliant |
 
+### Compliance Mappers
+
+Ademas de los mappers OWASP Top 10 y NIS2, se incorporan dos nuevos marcos normativos:
+
+#### ENS Mapper (`src/compliance/mappers/ens.mapper.ts`)
+
+Mapea los hallazgos contra el Esquema Nacional de Seguridad (Real Decreto 311/2022):
+
+| Control | Evalua | Descripcion |
+|---------|--------|-------------|
+| op.acc.2 - Control de acceso | CORS, COOP, Set-Cookie | Accesos no autorizados desde origen cruzado |
+| op.exp.5 - Proteccion de informacion | X-Powered-By, Server | Fuga de informacion tecnologica |
+| op.pl.3 - Seguridad perimetral | CSP, HSTS, X-Frame-Options | Defensa del perimetro web |
+| op.mon.2 - Monitorizacion | DMARC | Capacidad de monitoreo de correo |
+| op.cont.2 - Continuidad | TLS cert expiry | Renovacion de certificados |
+| org.organizacion - Marco organizativo | security.txt | Canal de divulgacion de vulnerabilidades |
+| op.vuln - Gestion de vulnerabilidades | Fingerprinting + CVEs | Parcheado de tecnologias |
+
+#### ISO 27001 Mapper (`src/compliance/mappers/iso27001.mapper.ts`)
+
+Mapea los hallazgos contra la norma ISO 27001:2022:
+
+| Control | Evalua | Descripcion |
+|---------|--------|-------------|
+| A.5.1 - Politicas de seguridad | security.txt | Politica de divulgacion |
+| A.9.1 - Control de acceso | CORS, COOP | Restriccion de accesos |
+| A.10.1 - Controles criptograficos | HSTS, TLS version, cert | Cifrado y comunicaciones seguras |
+| A.12.6 - Gestion de vulnerabilidades | Fingerprinting + CVEs | Vulnerabilidades conocidas |
+| A.13.1 - Seguridad de redes | CSP, XFO, XCTo | Seguridad perimetral |
+| A.13.2 - Transferencia de informacion | TLS | Cifrado en transferencia |
+| A.16.1 - Gestion de incidentes | CSP reporting, DMARC | Deteccion de incidentes |
+| A.18.1 - Cumplimiento normativo | Headers, TLS, DNS | Cumplimiento general |
+
 ### Export Service
 
 Servicio para exportar reportes en formatos descargables.

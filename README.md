@@ -1,6 +1,6 @@
 # Auditoria de Seguridad Web
 
-Herramienta de auditoria pasiva de seguridad web que analiza los headers HTTP de respuesta de cualquier URL publica, genera un puntaje de seguridad (0-100), identifica headers faltantes o mal configurados, y mapea los resultados contra los frameworks OWASP Top 10 y Directiva NIS2.
+Herramienta de auditoria pasiva de seguridad web que analiza los headers HTTP de respuesta de cualquier URL publica, genera un puntaje de seguridad (0-100), identifica headers faltantes o mal configurados, y mapea los resultados contra los frameworks OWASP Top 10, Directiva NIS2, ENS (Esquema Nacional de Seguridad) e ISO 27001.
 
 ## Tabla de Contenidos
 

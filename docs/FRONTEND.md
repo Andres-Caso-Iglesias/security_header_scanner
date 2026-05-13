@@ -123,11 +123,28 @@ Banner prominente debajo del resumen del scan que aparece cuando el certificado 
 
 Fila 50/50, emparejada con Archivos de Seguridad.
 
-### Fila 2: SRI + Fingerprinting
+### Columna izquierda (2/3)
 
-**SRI:** Total de recursos externos, cuantos tienen atributo `integrity`, y listado de los que no (URLs truncadas, expandibles al hacer click).
+La columna principal contiene en orden:
+1. **Headers de Seguridad** - 15 tarjetas en grilla de 3 columnas
+2. **TLS / SSL** - Conexion y certificado
+3. **DNS / Email Security** - SPF, DKIM, DMARC
+4. **Archivos de Seguridad** - security.txt y robots.txt
+5. **Archivos Sensibles** - 40 rutas sensibles escaneadas
 
-**Fingerprinting:** Tecnologias detectadas con nombre, version, confianza y evidencias. Tarjetas de CVE con ID, severidad y descripcion.
+### Columna derecha (1/3)
+
+**Cumplimiento Normativo** - 4 frameworks: OWASP Top 10, NIS2, ENS, ISO 27001
+
+### Filas inferiores (full-width)
+
+**SRI + Fingerprinting** en fila 50/50:
+- **SRI:** Resumen colapsable por defecto (estadistica + link "Mostrar recursos sin integrity"). Al hacer click se expande la lista de recursos con URLs truncadas (expandibles individualmente).
+- **Fingerprinting:** Tecnologias detectadas con nombre, version, confianza y evidencias. Tarjetas de CVE con ID, severidad y descripcion.
+
+### Recomendaciones (full-width)
+
+4 columnas (CRITICAL, HIGH, MEDIUM, LOW) que ocupan todo el ancho. Items truncados con ellipsis, expandibles al hacer click.
 
 ### RecommendationsList
 
@@ -163,19 +180,13 @@ La seccion de resultados utiliza un layout de ancho completo:
 |  +----------------------------+----------------------------+ |
 |  |  .column-main (flex: 2)    | .column-side (flex: 1)     | |
 |  |  Headers de Seguridad      | Cumplimiento Normativo     | |
-|  |  3 tarjetas por fila       | OWASP + NIS2              | |
-|  +--------------------------------------------------------+ |
-|  |  TLS / SSL (full-width, centrado)                       | |
-|  |  Conexion + Certificado                                 | |
-|  +--------------------------------------------------------+ |
-|  |  DNS / Email Security (full-width, centrado)             | |
-|  |  SPF + DKIM + DMARC                                     | |
-|  +--------------------------------------------------------+ |
-|  |  Security Files (col-half)  | Sensitive Files (col-half)| |
-|  |  security.txt + robots.txt  | .env, .git, config, etc.  | |
+|  |  TLS / SSL                 | OWASP + NIS2 + ENS        | |
+|  |  DNS / Email Security      | + ISO 27001               | |
+|  |  Archivos de Seguridad     |                            | |
+|  |  Archivos Sensibles        |                            | |
 |  +----------------------------+----------------------------+ |
-|  |  SRI (col-half)             | Fingerprinting (col-half) | |
-|  |  Recursos con/sin integrity | CMS, CVEs, tecnologias    | |
+|  |  SRI (col-half) colapsable  | Fingerprinting (col-half) | |
+|  |  Mostrar/Ocultar detalles  | CMS, CVEs, tecnologias    | |
 |  +----------------------------+----------------------------+ |
 |                                                             |
 |  +--------------------------------------------------------+ |
