@@ -55,7 +55,7 @@ export class ScannerController {
   scanStream(@Query('url') url: string) {
     const stream = this.scannerService.scanStream(url);
     return stream.pipe(
-      map((data) => ({
+      map((data: unknown) => ({
         data: JSON.stringify(data),
       })),
     );
