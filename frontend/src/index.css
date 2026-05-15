@@ -1,4 +1,86 @@
-body {
-  margin: 0;
-  padding: 0;
+@import "tailwindcss";
+
+@theme {
+  --color-bg-base: #080c18;
+  --color-bg-surface: #1a2744;
+  --color-bg-elevated: #253455;
+  --color-bg-hover: #2d3f62;
+  --color-sev-critical: #f87171;
+  --color-sev-high: #fb923c;
+  --color-sev-medium: #facc15;
+  --color-sev-low: #4ade80;
+  --color-accent-blue: #60a5fa;
+  --color-accent-green: #4ade80;
+  --color-accent-yellow: #facc15;
+  --color-accent-orange: #fb923c;
+  --color-accent-red: #f87171;
+  --color-accent-purple: #c084fc;
+  --color-accent-cyan: #22d3ee;
+  --color-grade-a: #4ade80;
+  --color-grade-b: #a3e635;
+  --color-grade-c: #facc15;
+  --color-grade-d: #fb923c;
+  --color-grade-e: #f87171;
+  --color-grade-f: #dc2626;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes score-fill {
+  to { stroke-dashoffset: var(--target-offset); }
+}
+
+@keyframes scan-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent-blue) 40%, transparent); }
+  70% { box-shadow: 0 0 0 20px color-mix(in srgb, var(--color-accent-blue) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent-blue) 0%, transparent); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-scan-pulse {
+  animation: scan-pulse 1.5s infinite;
+}
+
+/* Stagger delays for fade-in-up children */
+.stagger-1 { animation-delay: 0s; }
+.stagger-2 { animation-delay: 0.08s; }
+.stagger-3 { animation-delay: 0.16s; }
+.stagger-4 { animation-delay: 0.24s; }
+.stagger-5 { animation-delay: 0.32s; }
+.stagger-6 { animation-delay: 0.40s; }
+.stagger-7 { animation-delay: 0.48s; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #080c18; }
+::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.22); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.4); }
+
+/* SVG text centering helper */
+svg text {
+  user-select: none;
+}
+
+/* Skeleton loader */
+.skeleton-pulse {
+  background: linear-gradient(90deg, var(--color-bg-elevated) 25%, var(--color-bg-hover) 50%, var(--color-bg-elevated) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
 }
