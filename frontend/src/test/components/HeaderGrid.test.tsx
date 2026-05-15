@@ -34,8 +34,6 @@ describe('HeaderGrid', () => {
     fireEvent.change(select, { target: { value: 'high' } });
 
     const highHeaders = mockHeaders.filter(h => h.severity === 'high');
-    const otherHeaders = mockHeaders.filter(h => h.severity !== 'high');
-
     highHeaders.forEach(h => {
       expect(screen.getByText(h.header)).toBeInTheDocument();
     });

@@ -14,11 +14,12 @@ import { ExportService } from '../report/export/export.service';
 import { AnalyzerModule } from '../analyzer/analyzer.module';
 import { ComplianceModule } from '../compliance/compliance.module';
 import { ReportModule } from '../report/report.module';
+import { TIMEOUTS } from '../common/constants/timeout.config';
 
 @Module({
   imports: [
     HttpModule.register({
-      timeout: 10000,
+      timeout: TIMEOUTS.HTTP_CLIENT,
       maxRedirects: 5,
     }),
     AnalyzerModule,

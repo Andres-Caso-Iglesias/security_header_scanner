@@ -3,6 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import type { DetectedTech, CveInfo, TechFingerprintInfo } from '../../common/interfaces/fingerprint-info.interface';
 import { CveApiService } from './cve-api.service';
+import { TIMEOUTS } from '../../common/constants/timeout.config';
 
 interface TechSignature {
   name: string;
@@ -42,7 +43,7 @@ export class TechFingerprinterService {
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
-          timeout: 8000, maxRedirects: 3, responseType: 'text',
+          timeout: TIMEOUTS.PAGE_FETCH, maxRedirects: 3, responseType: 'text',
           validateStatus: (s) => s === 200,
           headers: { 'User-Agent': 'AuditoriaWeb-Scanner/1.0', 'Accept': 'text/html' },
         }),

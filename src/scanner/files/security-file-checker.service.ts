@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import type { SecurityFileInfo, SecurityFileCheck } from '../../common/interfaces/security-file-info.interface';
+import { TIMEOUTS } from '../../common/constants/timeout.config';
 
 @Injectable()
 export class SecurityFileCheckerService {
@@ -26,7 +27,7 @@ export class SecurityFileCheckerService {
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
-          timeout: 5000,
+          timeout: TIMEOUTS.SECURITY_FILE,
           maxRedirects: 3,
           responseType: 'text',
           validateStatus: () => true,

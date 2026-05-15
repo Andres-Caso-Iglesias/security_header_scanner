@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import type { SensitiveFilesInfo, SensitiveFileResult } from '../../common/interfaces/content-info.interface';
+import { TIMEOUTS } from '../../common/constants/timeout.config';
 
 @Injectable()
 export class SensitiveFileCheckerService {
@@ -84,7 +85,7 @@ export class SensitiveFileCheckerService {
     try {
       const response = await firstValueFrom(
         this.httpService.head(url, {
-          timeout: 4000,
+          timeout: TIMEOUTS.SENSITIVE_FILE,
           maxRedirects: 3,
           validateStatus: () => true,
           headers: { 'User-Agent': 'AuditoriaWeb-Scanner/1.0' },

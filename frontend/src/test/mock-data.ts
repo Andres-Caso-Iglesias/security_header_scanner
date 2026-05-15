@@ -1,21 +1,21 @@
-import type { ScanResult, HeaderResult, ComplianceSection, TlsInfo, DnsInfo, SecurityFileInfo, SriInfo, SensitiveFilesInfo, TechFingerprintInfo } from '../types';
+import type { ScanResult, HeaderResult, ComplianceSection, TlsInfo, DnsInfo } from '../types';
 
 export const mockHeaders: HeaderResult[] = [
-  { header: 'Content-Security-Policy', present: true, value: "default-src 'self'", grade: 0.35, severity: 'critical', weight: 25, finding: 'CSP parcial', recommendation: 'Implementar CSP completo' },
-  { header: 'Strict-Transport-Security', present: true, value: 'max-age=31536000', grade: 0.6, severity: 'high', weight: 15, finding: 'HSTS sin includeSubDomains', recommendation: 'Agregar includeSubDomains' },
-  { header: 'X-Frame-Options', present: true, value: 'SAMEORIGIN', grade: 1.0, severity: 'low', weight: 5, finding: 'Configurado correctamente', recommendation: '—' },
-  { header: 'X-Content-Type-Options', present: true, value: 'nosniff', grade: 1.0, severity: 'low', weight: 5, finding: 'Configurado', recommendation: '—' },
-  { header: 'Referrer-Policy', present: true, value: 'strict-origin-when-cross-origin', grade: 0.8, severity: 'medium', weight: 5, finding: 'Adecuada', recommendation: 'Considere no-referrer' },
-  { header: 'Permissions-Policy', present: false, value: null, grade: 0.0, severity: 'medium', weight: 5, finding: 'No implementado', recommendation: 'Implementar' },
-  { header: 'Cache-Control', present: true, value: 'no-store', grade: 0.9, severity: 'medium', weight: 5, finding: 'Aceptable', recommendation: '—' },
-  { header: 'Access-Control-Allow-Origin', present: true, value: '*', grade: 0.2, severity: 'high', weight: 10, finding: 'CORS permisivo', recommendation: 'Restringir' },
-  { header: 'Set-Cookie', present: true, value: 'session=abc; Path=/', grade: 0.3, severity: 'high', weight: 10, finding: 'Cookie sin Secure', recommendation: 'Agregar Secure' },
-  { header: 'Cross-Origin-Resource-Policy', present: false, value: null, grade: 0.0, severity: 'medium', weight: 4, finding: 'No implementado', recommendation: 'Implementar CORP' },
-  { header: 'Cross-Origin-Opener-Policy', present: false, value: null, grade: 0.0, severity: 'medium', weight: 4, finding: 'No implementado', recommendation: 'Implementar COOP' },
-  { header: 'Cross-Origin-Embedder-Policy', present: false, value: null, grade: 0.0, severity: 'medium', weight: 4, finding: 'No implementado', recommendation: 'Implementar COEP' },
-  { header: 'X-Powered-By', present: true, value: 'Express', grade: 0.0, severity: 'low', weight: 2, finding: 'Tecnología expuesta', recommendation: 'Eliminar' },
-  { header: 'Server', present: true, value: 'nginx/1.24.0', grade: 0.0, severity: 'low', weight: 2, finding: 'Versión expuesta', recommendation: 'Ocultar' },
-  { header: 'X-XSS-Protection', present: false, value: null, grade: 0.5, severity: 'low', weight: 1, finding: 'Obsoleto', recommendation: 'Eliminar' },
+  { header: 'Content-Security-Policy', present: true, value: "default-src 'self'", expected: "default-src 'self'", grade: 0.35, severity: 'critical', weight: 25, finding: 'CSP parcial', recommendation: 'Implementar CSP completo' },
+  { header: 'Strict-Transport-Security', present: true, value: 'max-age=31536000', expected: 'max-age=31536000; includeSubDomains', grade: 0.6, severity: 'high', weight: 15, finding: 'HSTS sin includeSubDomains', recommendation: 'Agregar includeSubDomains' },
+  { header: 'X-Frame-Options', present: true, value: 'SAMEORIGIN', expected: 'SAMEORIGIN', grade: 1.0, severity: 'low', weight: 5, finding: 'Configurado correctamente', recommendation: '—' },
+  { header: 'X-Content-Type-Options', present: true, value: 'nosniff', expected: 'nosniff', grade: 1.0, severity: 'low', weight: 5, finding: 'Configurado', recommendation: '—' },
+  { header: 'Referrer-Policy', present: true, value: 'strict-origin-when-cross-origin', expected: 'strict-origin-when-cross-origin', grade: 0.8, severity: 'medium', weight: 5, finding: 'Adecuada', recommendation: 'Considere no-referrer' },
+  { header: 'Permissions-Policy', present: false, value: null, expected: '', grade: 0.0, severity: 'medium', weight: 5, finding: 'No implementado', recommendation: 'Implementar' },
+  { header: 'Cache-Control', present: true, value: 'no-store', expected: 'no-store', grade: 0.9, severity: 'medium', weight: 5, finding: 'Aceptable', recommendation: '—' },
+  { header: 'Access-Control-Allow-Origin', present: true, value: '*', expected: '', grade: 0.2, severity: 'high', weight: 10, finding: 'CORS permisivo', recommendation: 'Restringir' },
+  { header: 'Set-Cookie', present: true, value: 'session=abc; Path=/', expected: 'session=abc; Path=/; Secure; HttpOnly', grade: 0.3, severity: 'high', weight: 10, finding: 'Cookie sin Secure', recommendation: 'Agregar Secure' },
+  { header: 'Cross-Origin-Resource-Policy', present: false, value: null, expected: '', grade: 0.0, severity: 'medium', weight: 4, finding: 'No implementado', recommendation: 'Implementar CORP' },
+  { header: 'Cross-Origin-Opener-Policy', present: false, value: null, expected: '', grade: 0.0, severity: 'medium', weight: 4, finding: 'No implementado', recommendation: 'Implementar COOP' },
+  { header: 'Cross-Origin-Embedder-Policy', present: false, value: null, expected: '', grade: 0.0, severity: 'medium', weight: 4, finding: 'No implementado', recommendation: 'Implementar COEP' },
+  { header: 'X-Powered-By', present: true, value: 'Express', expected: '', grade: 0.0, severity: 'low', weight: 2, finding: 'Tecnología expuesta', recommendation: 'Eliminar' },
+  { header: 'Server', present: true, value: 'nginx/1.24.0', expected: '', grade: 0.0, severity: 'low', weight: 2, finding: 'Versión expuesta', recommendation: 'Ocultar' },
+  { header: 'X-XSS-Protection', present: false, value: null, expected: '', grade: 0.5, severity: 'low', weight: 1, finding: 'Obsoleto', recommendation: 'Eliminar' },
 ];
 
 export const mockCompliance: ComplianceSection[] = [

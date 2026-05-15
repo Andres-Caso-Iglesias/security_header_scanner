@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import type { SriInfo, SriResource } from '../../common/interfaces/content-info.interface';
+import { TIMEOUTS } from '../../common/constants/timeout.config';
 
 @Injectable()
 export class SriCheckerService {
@@ -13,7 +14,7 @@ export class SriCheckerService {
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {
-          timeout: 10000,
+          timeout: TIMEOUTS.SRI,
           maxRedirects: 5,
           responseType: 'text',
           validateStatus: (s) => s === 200,

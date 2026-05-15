@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { cn } from './lib/cn';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ScanForm } from './components/ScanForm';
 import { MetaSection } from './components/MetaSection';
 import { SslWarning } from './components/SslWarning';
@@ -13,6 +14,32 @@ import { RecommendationsSection } from './components/RecommendationsSection';
 import { ComplianceGrid } from './components/ComplianceGrid';
 import { SecurityFilesSection } from './components/SecurityFilesSection';
 import type { ScanResult } from './types';
+
+type ScanErrorType = 'network' | 'timeout' | 'server' | 'validation' | 'unknown';
+
+interface ScanError {
+  type: ScanErrorType;
+  message: string;
+  details?: string;
+}
+
+function classifyError(err: unknown): ScanError {
+  const msg = (err as Error)?.message || String(err);
+
+  if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ERR_CONNECTION')) {
+    return { type: 'network', message: 'No se pudo conectar con el servidor', details: 'Verifica que el backend esté corriendo en http://localhost:3000' };
+  }
+  if (msg.includes('timed out') || msg.includes('timeout') || msg.includes('Timeout') || msg.includes('abort')) {
+    return { type: 'timeout', message: 'La solicitud tardó demasiado', details: 'El servidor objetivo no respondió a tiempo. Intenta de nuevo o verifica la URL.' };
+  }
+  if (msg.startsWith('Error 4')) {
+    return { type: 'validation', message: msg, details: 'Verifica la URL ingresada e intenta de nuevo.' };
+  }
+  if (msg.startsWith('Error 5')) {
+    return { type: 'server', message: msg, details: 'El servidor de análisis encontró un error interno.' };
+  }
+  return { type: 'unknown', message: msg, details: 'Ocurrió un error inesperado.' };
+}
 
 type TabId = 'headers' | 'compliance' | 'tls' | 'dns' | 'sri' | 'fingerprint' | 'sensitive' | 'recommendations';
 
@@ -31,29 +58,39 @@ export default function App() {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ScanError | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('headers');
 
   async function handleScan() {
-    if (!url.trim()) return;
+    if (!url.trim()) {
+      setError({ type: 'validation', message: 'Ingresa una URL para escanear', details: 'La URL debe incluir el protocolo (https://...)' });
+      return;
+    }
     setLoading(true);
     setError(null);
     setResult(null);
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
       const res = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: url.trim() }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
+
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message || `Error ${res.status}: Failed to scan URL`);
+        const errMsg = data.message || `Error ${res.status}`;
+        setError(classifyError(errMsg));
         return;
       }
       setResult(data as ScanResult);
     } catch (e) {
-      setError(`Connection error: ${(e as Error).message}`);
+      setError(classifyError(e));
     } finally {
       setLoading(false);
     }
@@ -89,11 +126,33 @@ export default function App() {
 
         {/* Error state */}
         {error && (
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 my-6">
-            <div className="w-1 h-6 rounded-sm bg-[var(--color-accent-red)]" />
-            <div>
-              <strong className="text-[var(--color-accent-red)] block">Error de escaneo</strong>
-              <span className="text-sm text-slate-400">{error}</span>
+          <div className={cn(
+            "flex items-start gap-3 p-4 rounded-xl border my-6 animate-fade-in-up",
+            error.type === 'validation' && "bg-yellow-500/10 border-yellow-500/20",
+            error.type === 'network' && "bg-orange-500/10 border-orange-500/20",
+            error.type === 'timeout' && "bg-orange-500/10 border-orange-500/20",
+            error.type === 'server' && "bg-red-500/10 border-red-500/20",
+            error.type === 'unknown' && "bg-red-500/10 border-red-500/20",
+          )}>
+            <div className={cn(
+              "w-1 h-10 rounded-sm flex-shrink-0",
+              error.type === 'validation' && "bg-[var(--color-accent-yellow)]",
+              error.type === 'network' && "bg-[var(--color-accent-orange)]",
+              error.type === 'timeout' && "bg-[var(--color-accent-orange)]",
+              error.type === 'server' && "bg-[var(--color-accent-red)]",
+              error.type === 'unknown' && "bg-[var(--color-accent-red)]",
+            )} />
+            <div className="flex-1">
+              <strong className="text-sm text-white block">{error.message}</strong>
+              {error.details && (
+                <p className="text-xs text-slate-400 mt-1">{error.details}</p>
+              )}
+              <button
+                onClick={handleScan}
+                className="mt-3 px-4 py-1.5 rounded-lg text-xs font-medium bg-[var(--color-bg-elevated)] text-slate-300 border border-slate-700/30 cursor-pointer hover:bg-[var(--color-bg-hover)] transition-colors"
+              >
+                Reintentar
+              </button>
             </div>
           </div>
         )}
@@ -125,22 +184,54 @@ export default function App() {
 
             {/* Tab content */}
             <div className="animate-fade-in-up">
-              {activeTab === 'headers' && <HeaderGrid headers={result.headers} />}
-              {activeTab === 'compliance' && (
-                <div className="w-screen ml-[calc(-50vw+50%)] px-8 box-border">
-                  <ComplianceGrid compliance={result.compliance} />
-                </div>
+              {activeTab === 'headers' && (
+                <ErrorBoundary title="Headers">
+                  <HeaderGrid headers={result.headers} />
+                </ErrorBoundary>
               )}
-              {activeTab === 'tls' && <TlsSection tls={result.tls} />}
-              {activeTab === 'dns' && <DnsSection dns={result.dns} />}
-              {activeTab === 'sri' && <SriSection sri={result.sri} />}
-              {activeTab === 'fingerprint' && <FingerprintSection fingerprint={result.fingerprint} />}
-              {activeTab === 'sensitive' && <SensitiveSection sensitive={result.sensitiveFiles} />}
-              {activeTab === 'recommendations' && <RecommendationsSection recommendations={result.recommendations} />}
+              {activeTab === 'compliance' && (
+                <ErrorBoundary title="Cumplimiento">
+                  <div className="w-screen ml-[calc(-50vw+50%)] px-8 box-border">
+                    <ComplianceGrid compliance={result.compliance} />
+                  </div>
+                </ErrorBoundary>
+              )}
+              {activeTab === 'tls' && (
+                <ErrorBoundary title="TLS/SSL">
+                  <TlsSection tls={result.tls} />
+                </ErrorBoundary>
+              )}
+              {activeTab === 'dns' && (
+                <ErrorBoundary title="DNS">
+                  <DnsSection dns={result.dns} />
+                </ErrorBoundary>
+              )}
+              {activeTab === 'sri' && (
+                <ErrorBoundary title="SRI">
+                  <SriSection sri={result.sri} />
+                </ErrorBoundary>
+              )}
+              {activeTab === 'fingerprint' && (
+                <ErrorBoundary title="Fingerprinting">
+                  <FingerprintSection fingerprint={result.fingerprint} />
+                </ErrorBoundary>
+              )}
+              {activeTab === 'sensitive' && (
+                <ErrorBoundary title="Sensibles">
+                  <SensitiveSection sensitive={result.sensitiveFiles} />
+                </ErrorBoundary>
+              )}
+              {activeTab === 'recommendations' && (
+                <ErrorBoundary title="Recomendaciones">
+                  <RecommendationsSection recommendations={result.recommendations} />
+                </ErrorBoundary>
+              )}
             </div>
 
-            {/* Security files — always visible */}
-            <SecurityFilesSection securityFiles={result.securityFiles} />
+            {/* Security files */}
+            <ErrorBoundary title="Archivos de Seguridad">
+              <SecurityFilesSection securityFiles={result.securityFiles} />
+            </ErrorBoundary>
 
             {/* Footer */}
             <footer className="mt-12 py-5 border-t border-white/5 text-center text-xs text-slate-600">

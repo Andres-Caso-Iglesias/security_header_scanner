@@ -2,11 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as tls from 'tls';
 import * as net from 'net';
 import type { TlsInfo, CertificateInfo } from '../../common/interfaces/tls-info.interface';
+import { TIMEOUTS } from '../../common/constants/timeout.config';
 
 @Injectable()
 export class TlsCheckerService {
   private readonly logger = new Logger(TlsCheckerService.name);
-  private readonly timeoutMs = 8000;
+  private readonly timeoutMs = TIMEOUTS.TLS;
   private readonly defaultPort = 443;
 
   async check(hostname: string, port?: number): Promise<TlsInfo> {
