@@ -1,5 +1,8 @@
 # Backend: Passive HTTP Security Header Scanner
 
+> **PROYECTO ACADEMICO** — Esta herramienta fue desarrollada como proyecto de Master en Ciberseguridad.
+> Los resultados son orientativos. No utilizar como unico instrumento de auditoria profesional.
+
 Documentacion tecnica detallada del backend NestJS.
 
 ## Tabla de Contenidos
@@ -164,6 +167,10 @@ Servicio de fingerprinting que identifica tecnologias del servidor, CMS, framewo
 | Bootstrap | Framework | Stylesheet references en HTML |
 
 **Base de datos de CVEs:** 20 CVEs conocidos para WordPress, Joomla, Drupal, PHP, Apache y Nginx, mapeados por rango de version semantica.
+
+> ⚠️ **LIMITACION IMPORTANTE:** Esta base de datos contiene solo 20 CVEs hardcodeados. No se actualiza automaticamente.
+> La ausencia de deteccion de CVEs NO significa que el sitio este libre de vulnerabilidades.
+> No reemplaza herramientas especializadas como Nmap, OpenVAS, Nessus o Snyk.
 
 **Flujo:**
 1. Toma los headers HTTP ya obtenidos por el HttpClientService

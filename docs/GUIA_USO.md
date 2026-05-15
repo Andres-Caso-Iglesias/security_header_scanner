@@ -1,5 +1,11 @@
 # Guia de Uso e Interpretacion de Resultados
 
+> **PROYECTO ACADEMICO**
+>
+> Esta herramienta fue desarrollada como proyecto de Master en Ciberseguridad con fines educativos.
+> Los resultados son ORIENTATIVOS y no constituyen una auditoria de seguridad profesional.
+> **No confiar ciegamente en los resultados — verificar manualmente los hallazgos criticos.**
+
 Guia practica para utilizar la herramienta de auditoria de seguridad web y entender los resultados del analisis.
 
 ## Tabla de Contenidos
@@ -486,4 +492,8 @@ El analisis de compliance (OWASP Top 10, NIS2) se basa unicamente en los headers
 4. **Sin almacenamiento**: No guarda historial de escaneos, cada analisis es independiente
 5. **Dependencia de red**: Los resultados dependen de la conectividad con el destino; firewalls, WAFs y CDNs pueden afectar los headers recibidos
 6. **CSP basico**: El analisis de CSP verifica directivas principales pero no evalua la politica completa
-7. **Scope academico**: La herramienta fue desarrollada como proyecto de master y no debe usarse como unico instrumento de auditoria profesional
+7. **Scope academico**: La herramienta fue desarrollada como proyecto de master y **no debe usarse como unico instrumento de auditoria profesional**
+8. **CVEs limitados**: La base de datos interna contiene solo 20 CVEs. La ausencia de deteccion NO implica que el sitio este libre de vulnerabilidades
+9. **Compliance indicativo**: El mapeo a frameworks normativos es automatico y parcial. No reemplaza una auditoria de compliance real
+10. **Falsos positivos en archivos sensibles**: El escaneo de rutas como `/.env` puede generar falsos positivos. Verificar manualmente cada hallazgo
+11. **Score heuristico**: La ponderacion de headers (CSP=25, HSTS=15, etc.) es una decision de diseno, no un estandar universal

@@ -1,73 +1,68 @@
-# React + TypeScript + Vite
+# Frontend — Auditoría de Seguridad Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend en React 19 + Vite 8 + Tailwind CSS 4 para la herramienta de auditoría de seguridad web.
 
-Currently, two official plugins are available:
+> Proyecto académico — No usar como única herramienta de auditoría profesional.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Stack
 
-## React Compiler
+| Tecnología | Versión | Propósito |
+|-----------|---------|-----------|
+| React | 19 | UI |
+| TypeScript | 6 | Tipado |
+| Vite | 8 | Bundler / dev server |
+| Tailwind CSS | 4 | Estilos |
+| Chart.js | 4 | Gráficos (DNS, SRI) |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Scripts
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev      # Dev server (localhost:5173)
+npm run build    # Build producción → dist/
+npm run lint     # ESLint
+npm run preview  # Vista previa del build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Estructura
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+src/
+├── main.tsx                  Entry point
+├── index.css                 Tailwind + tema + animaciones
+├── App.tsx                   Orquestador principal
+├── types.ts                  Interfaces del dominio
+├── lib/
+│   └── cn.ts                 Utilidad Tailwind (clsx + tailwind-merge)
+└── components/
+    ├── ScoreCircle.tsx        SVG animado de puntuación
+    ├── ScanForm.tsx           Input URL + botón escanear
+    ├── MetaSection.tsx        Score + metadatos + exportación
+    ├── SslWarning.tsx         Alerta de certificado expirado
+    ├── HeaderGrid.tsx         Grid de headers con filtro
+    ├── TlsSection.tsx         Datos TLS/SSL
+    ├── DnsSection.tsx         Registros DNS + gráfico
+    ├── SriSection.tsx         SRI + gráfico
+    ├── FingerprintSection.tsx Fingerprinting + CVEs
+    ├── SensitiveSection.tsx   Archivos sensibles expuestos
+    ├── RecommendationsSection.tsx Recomendaciones por severidad
+    ├── ComplianceGrid.tsx     Frameworks normativos
+    └── SecurityFilesSection.tsx  security.txt + robots.txt
+```
+
+## API
+
+El frontend se comunica con el backend NestJS a través de un proxy de Vite.
+
+| Endpoint | Método | Propósito |
+|----------|--------|-----------|
+| `/api/scan` | POST | Ejecuta escaneo de URL |
+| `/api/export` | POST | Descarga reporte (JSON/PDF) |
+
+Proxy configurado en `vite.config.ts`: `/api` → `http://localhost:3000`.
+
+## Limitaciones
+
+- No tiene autenticación ni manejo de sesiones
+- No almacena historial de escaneos
+- Los resultados dependen del backend y la conectividad de red
+- Esta es una herramienta académica, no un producto de seguridad profesional

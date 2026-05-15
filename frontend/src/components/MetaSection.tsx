@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ScoreCircle } from './ScoreCircle';
 import type { ScanResult } from '../types';
 
@@ -6,7 +7,39 @@ interface MetaSectionProps {
 }
 
 export function MetaSection({ result }: MetaSectionProps) {
+  const [exporting, setExporting] = useState<'json' | 'pdf' | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const dnsOk = [result.dns.spf, result.dns.dkim, result.dns.dmarc].filter(r => r.present).length;
+
+  async function downloadReport(format: 'json' | 'pdf') {
+    setExportError(null);
+    setExporting(format);
+    try {
+      const res = await fetch('/api/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: result.url, format }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message || `Export failed (${res.status})`);
+      }
+      const blob = await res.blob();
+      const filename = `auditoria-${result.url.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40)}-${new Date().toISOString().slice(0, 10)}.${format}`;
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    } catch (e) {
+      setExportError((e as Error).message);
+      console.error('Export error:', e);
+    } finally {
+      setExporting(null);
+    }
+  }
 
   return (
     <div className="grid grid-cols-[auto_1fr] gap-8 items-start mb-6 animate-fade-in-up">
@@ -31,21 +64,38 @@ export function MetaSection({ result }: MetaSectionProps) {
         </div>
 
         {/* Download buttons */}
-        <div className="flex gap-2 mt-4">
-          <DownloadButton
+        <div className="flex gap-2 mt-4 items-center">
+          <button
             onClick={() => downloadReport('json')}
-            icon={
+            disabled={exporting !== null}
+            className="rounded-xl border border-slate-700/10 bg-[var(--color-bg-surface)] px-[18px] py-2 inline-flex items-center gap-[6px] text-[0.8rem] font-medium text-slate-400 cursor-pointer hover:border-slate-700/30 hover:bg-[var(--color-bg-elevated)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            }
-            label="Descargar JSON"
-          />
-          <DownloadButton
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            {exporting === 'json' ? 'Descargando...' : 'Descargar JSON'}
+          </button>
+          <button
             onClick={() => downloadReport('pdf')}
-            icon={
+            disabled={exporting !== null}
+            className="rounded-xl border border-slate-700/10 bg-[var(--color-bg-surface)] px-[18px] py-2 inline-flex items-center gap-[6px] text-[0.8rem] font-medium text-slate-400 cursor-pointer hover:border-slate-700/30 hover:bg-[var(--color-bg-elevated)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            }
-            label="Descargar PDF"
-          />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <polyline points="10 9 9 9 8 9" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            {exporting === 'pdf' ? 'Generando PDF...' : 'Descargar PDF'}
+          </button>
+          {exportError && (
+            <span className="text-xs text-[var(--color-accent-red)] ml-2">{exportError}</span>
+          )}
         </div>
       </div>
     </div>
@@ -61,44 +111,4 @@ function MetaCard({ label, value, large }: { label: string; value: string; large
       </div>
     </div>
   );
-}
-
-function DownloadButton({ onClick, icon, label }: { onClick: () => void; icon: React.ReactNode; label: string }) {
-  return (
-    <button
-      onClick={onClick}
-      className="rounded-xl border border-slate-700/10 bg-[var(--color-bg-surface)] px-[18px] py-2 inline-flex items-center gap-[6px] text-[0.8rem] font-medium text-slate-400 cursor-pointer hover:border-slate-700/30 hover:bg-[var(--color-bg-elevated)] transition-all"
-    >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        {icon}
-        <polyline points="7 10 12 15 17 10" />
-        <line x1="12" y1="15" x2="12" y2="3" />
-      </svg>
-      {label}
-    </button>
-  );
-}
-
-async function downloadReport(format: 'json' | 'pdf') {
-  const urlInput = document.getElementById('url-input') as HTMLInputElement;
-  const url = urlInput?.value;
-  if (!url) return;
-  try {
-    const res = await fetch('/api/export', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: url.trim(), format }),
-    });
-    if (!res.ok) throw new Error(`Export failed: ${res.status}`);
-    const blob = await res.blob();
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `auditoria-${url.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40)}-${new Date().toISOString().slice(0, 10)}.${format}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
-  } catch (e) {
-    console.error('Export error:', e);
-  }
 }
