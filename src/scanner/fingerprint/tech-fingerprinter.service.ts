@@ -245,9 +245,112 @@ export class TechFingerprinterService {
       },
       // -- Google Analytics --
       {
-        name: 'Google Analytics', category: 'framework',
+        name: 'Google Analytics', category: 'cms',
         detect: (_, html) => {
-          if (/gtag\s*\(|google-analytics\.com|ga\s*\(['"]create['"]/i.test(html)) return { name: 'Google Analytics', version: null, category: 'framework', confidence: 'medium', evidence: ['Google Analytics detected'] };
+          if (/gtag\s*\(|google-analytics\.com|ga\s*\(['"]create['"]/i.test(html)) return { name: 'Google Analytics', version: null, category: 'cms', confidence: 'medium', evidence: ['Google Analytics detected'] };
+          return null;
+        },
+      },
+      // -- Vite --
+      {
+        name: 'Vite', category: 'cms',
+        detect: (_, html) => {
+          const m = html.match(/<script\s+type=["']module["'][^>]*src=["'][^"']*\/@vite\/([^"']+)/i);
+          if (m) return { name: 'Vite', version: null, category: 'cms', confidence: 'high', evidence: ['Vite module script detected'] };
+          return null;
+        },
+      },
+      // -- Webpack --
+      {
+        name: 'Webpack', category: 'cms',
+        detect: (_, html) => {
+          // Webpack bundles typically have [name].[hash].js pattern
+          const m = html.match(/<script[^>]*src=["'][^"']*\/(\w+)\.([a-f0-9]{8,20})\.js["']/i);
+          if (m) return { name: 'Webpack', version: null, category: 'cms', confidence: 'medium', evidence: [`Webpack chunked bundle: ${m[1]}.${m[2].substring(0, 8)}...js`] };
+          return null;
+        },
+      },
+      // -- Next.js --
+      {
+        name: 'Next.js', category: 'cms',
+        detect: (h, html) => {
+          if (/__NEXT_DATA__/i.test(html)) return { name: 'Next.js', version: null, category: 'cms', confidence: 'high', evidence: ['__NEXT_DATA__ script detected'] };
+          if (h['x-nextjs-page'] || h['x-middleware-rewrite']) return { name: 'Next.js', version: null, category: 'cms', confidence: 'high', evidence: ['Next.js headers detected'] };
+          if (h['x-powered-by'] && /next\.js/i.test(h['x-powered-by'])) return { name: 'Next.js', version: null, category: 'cms', confidence: 'high', evidence: [`X-Powered-By: ${h['x-powered-by']}`] };
+          return null;
+        },
+      },
+      // -- Nuxt.js --
+      {
+        name: 'Nuxt.js', category: 'cms',
+        detect: (_, html) => {
+          if (/__NUXT__/i.test(html)) return { name: 'Nuxt.js', version: null, category: 'cms', confidence: 'high', evidence: ['__NUXT__ script detected'] };
+          return null;
+        },
+      },
+      // -- Ruby on Rails --
+      {
+        name: 'Ruby on Rails', category: 'framework',
+        detect: (h) => {
+          const evidence: string[] = [];
+          if (h['x-rack-cache']) evidence.push(`X-Rack-Cache: ${h['x-rack-cache']}`);
+          if (h['x-runtime']) evidence.push(`X-Runtime: ${h['x-runtime']}`);
+          if (h['set-cookie'] && /_session_id/i.test(h['set-cookie'])) evidence.push('Rails session cookie');
+          if (h['x-powered-by'] && /rails/i.test(h['x-powered-by'])) evidence.push(`X-Powered-By: ${h['x-powered-by']}`);
+          if (evidence.length > 0) return { name: 'Ruby on Rails', version: null, category: 'framework', confidence: evidence.length >= 2 ? 'high' : 'medium', evidence };
+          return null;
+        },
+      },
+      // -- Tomcat --
+      {
+        name: 'Tomcat', category: 'server',
+        detect: (h) => {
+          if (h['server'] && /apache-coyote/i.test(h['server'])) return { name: 'Tomcat', version: null, category: 'server', confidence: 'high', evidence: [`Server: ${h['server']}`] };
+          return null;
+        },
+      },
+      // -- IIS --
+      {
+        name: 'IIS', category: 'server',
+        detect: (h) => {
+          const evidence: string[] = [];
+          if (h['server'] && /microsoft-iis\/([\d.]+)/i.test(h['server'])) {
+            const m = h['server'].match(/microsoft-iis\/([\d.]+)/i);
+            return { name: 'IIS', version: m?.[1] || null, category: 'server', confidence: 'high', evidence: [`Server: ${h['server']}`] };
+          }
+          if (h['x-aspnet-version']) evidence.push(`X-AspNet-Version: ${h['x-aspnet-version']}`);
+          if (h['x-powered-by'] && /asp\.net/i.test(h['x-powered-by'])) evidence.push(`X-Powered-By: ${h['x-powered-by']}`);
+          if (evidence.length > 0) return { name: 'IIS', version: null, category: 'server', confidence: 'high', evidence };
+          return null;
+        },
+      },
+      // -- Gunicorn --
+      {
+        name: 'Gunicorn', category: 'server',
+        detect: (h) => {
+          if (h['server'] && /gunicorn/i.test(h['server'])) return { name: 'Gunicorn', version: null, category: 'server', confidence: 'high', evidence: [`Server: ${h['server']}`] };
+          return null;
+        },
+      },
+      // -- Node.js (generic) --
+      {
+        name: 'Node.js', category: 'runtime',
+        detect: (h) => {
+          const evidence: string[] = [];
+          if (h['set-cookie'] && /connect\.sid/i.test(h['set-cookie'])) evidence.push('Express session cookie (connect.sid)');
+          if (h['x-powered-by'] && /express/i.test(h['x-powered-by'])) evidence.push(`X-Powered-By: ${h['x-powered-by']}`);
+          if (evidence.length > 0) return { name: 'Node.js', version: null, category: 'runtime', confidence: 'medium', evidence };
+          return null;
+        },
+      },
+      // -- Python (generic) --
+      {
+        name: 'Python', category: 'runtime',
+        detect: (h) => {
+          if (h['server'] && /python\/([\d.]+)/i.test(h['server'])) {
+            const m = h['server'].match(/python\/([\d.]+)/i);
+            return { name: 'Python', version: m?.[1] || null, category: 'runtime', confidence: 'high', evidence: [`Server: ${h['server']}`] };
+          }
           return null;
         },
       },

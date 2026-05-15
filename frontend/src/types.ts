@@ -116,6 +116,7 @@ export interface SensitiveFileResult {
   statusCode: number | null;
   exposed: boolean;
   finding: string;
+  confidence: 'high' | 'medium' | 'low';
 }
 
 export interface SensitiveFilesInfo {
