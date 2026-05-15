@@ -7,7 +7,14 @@ interface ComplianceGridProps {
 
 export function ComplianceGrid({ compliance }: ComplianceGridProps) {
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div>
+      {/* Disclaimer */}
+      <div className="mb-4 p-3 rounded-lg bg-yellow-500/8 border border-yellow-500/15 text-xs text-slate-400 leading-relaxed">
+        <strong className="text-[var(--color-accent-yellow)]">Mapeo automático — no reemplaza una auditoría formal.</strong>{' '}
+        El cumplimiento se evalúa exclusivamente en base a los headers HTTP. Los frameworks normativos incluyen requisitos organizativos, de procesos y técnicos que no pueden verificarse solo con headers.
+      </div>
+
+      <div className="grid grid-cols-4 gap-4">
       {compliance.map(comp => {
         const total = comp.findings.length;
         const ok = comp.findings.filter(f => f.status === 'compliant').length;
@@ -61,6 +68,7 @@ export function ComplianceGrid({ compliance }: ComplianceGridProps) {
           </div>
         );
       })}
+    </div>
     </div>
   );
 }

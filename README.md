@@ -33,8 +33,8 @@ La herramienta recibe una URL vía API REST, realiza una petición HTTP a la mis
 | **TLS/SSL** | Versión del protocolo, datos del certificado | Configuración de cifrado, vulnerabilidades TLS |
 | **DNS** | Registros SPF, DKIM, DMARC | Seguridad del servidor DNS, DNSSEC |
 | **Archivos sensibles** | Accesibilidad HTTP de 40 rutas comunes | Contenido real de los archivos (puede dar falsos positivos) |
-| **Fingerprinting** | Tecnologías detectadas en headers y HTML | Versiones exactas no verificadas |
-| **CVEs** | 20 CVEs en base de datos interna (MUY LIMITADA) | Vulnerabilidades reales del sitio |
+| **Fingerprinting** | 23 tecnologías detectables + consulta CVEs en tiempo real via OSV.dev | Versiones exactas no verificadas |
+| **CVEs** | 20 CVEs locales + consulta en tiempo real a OSV.dev (Google Open Source Vulnerabilities — millones de registros) | Vulnerabilidades no cubiertas por OSV, dependencia de conectividad a Internet |
 | **Compliance** | Mapeo automático basado en headers | Auditoría de compliance real (mucho más amplia) |
 
 ### Casos de uso apropiados
@@ -86,13 +86,13 @@ Esta herramienta fue desarrollada como proyecto de fin de Máster en Ciberseguri
 
 El mapeo a OWASP Top 10, NIS2, ENS e ISO 27001 es **automático y basado exclusivamente en headers HTTP**. Estos frameworks son mucho más amplios e incluyen requisitos organizativos, de procesos y técnicos que no pueden verificarse solo con headers. **El reporte de compliance es indicativo, no concluyente.**
 
-### 3. Base de Datos de CVEs Limitada
+### 3. Base de Datos de CVEs
 
-La detección de CVEs utiliza una base de datos interna de **solamente 20 CVEs** hardcodeados. Esto significa que:
-- La ausencia de CVEs detectados **NO implica** que el sitio esté libre de vulnerabilidades
-- La base no se actualiza automáticamente
-- No cubre la mayoría de vulnerabilidades conocidas
-- **No reemplaza** herramientas como Nmap, OpenVAS, Nessus o Snyk
+La detección de CVEs combina:
+- **Base local**: 20 CVEs hardcodeados como respaldo offline
+- **API OSV.dev**: consulta en tiempo real a la base de datos de Open Source Vulnerabilities de Google (millones de registros)
+
+La consulta a OSV.dev depende de conectividad a Internet. Si la API no responde (timeout, error de red), se utiliza solo la base local. **La ausencia de CVEs detectados no implica que el sitio esté libre de vulnerabilidades.** No reemplaza herramientas como Nmap, OpenVAS, Nessus o Snyk.
 
 ### 4. Score Numérico Heurístico
 

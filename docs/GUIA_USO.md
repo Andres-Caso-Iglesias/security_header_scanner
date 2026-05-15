@@ -261,7 +261,7 @@ El atributo `integrity` en etiquetas `<script>` y `<link rel="stylesheet">` perm
 
 ### Archivos Sensibles
 
-Escaneo pasivo de 40 rutas comunes que pueden exponer informacion critica:
+Escaneo pasivo de 40 rutas comunes que pueden exponer informacion critica. Incluye deteccion de falsos positivos:
 
 | Ruta | Riesgo |
 |------|--------|
@@ -274,11 +274,18 @@ Escaneo pasivo de 40 rutas comunes que pueden exponer informacion critica:
 | `Dockerfile` | Configuracion de contenedores |
 | `backup/`, `logs/`, `private/` | Directorios con contenido sensible |
 
+**Confianza del resultado:** Cada hallazgo incluye un nivel de confianza:
+- **high**: respuesta con contenido no-HTML (JSON, texto plano) — exposicion real probable
+- **medium**: respuesta HTML pequena — posible pagina simple
+- **low**: respuesta HTML grande — probable soft 404, verificar manualmente
+
 ### Fingerprinting de Tecnologias
 
-Identifica el stack tecnologico del sitio: CMS, framework, servidor, runtime y CDN. Cuando se detecta una version concreta, se consulta una base de datos interna de 20 CVEs conocidos para alertar sobre vulnerabilidades publicas.
+Identifica el stack tecnologico del sitio: CMS, framework, servidor, runtime y CDN. Cuando se detecta una version concreta, se consulta:
+1. **Base de datos local** de 20 CVEs conocidos
+2. **API OSV.dev** (Google Open Source Vulnerabilities) — consulta en tiempo real con millones de registros actualizados
 
-**Tecnologias detectables:** WordPress, Joomla, Drupal, PHP, Express, ASP.NET, Laravel, Django, Nginx, Apache, Cloudflare, jQuery, Bootstrap, Google Analytics.
+**Tecnologias detectables (23):** WordPress, Joomla, Drupal, PHP, Express, ASP.NET, Laravel, Django, Nginx, Apache, Cloudflare, jQuery, Bootstrap, Google Analytics, **Vite, Webpack, Next.js, Nuxt.js, Ruby on Rails, Tomcat, IIS, Gunicorn, Node.js, Python**.
 
 **Interpretacion de confianza:**
 - **high**: detectado por meta generator, header explicito o patron inequivoco
@@ -493,7 +500,7 @@ El analisis de compliance (OWASP Top 10, NIS2) se basa unicamente en los headers
 5. **Dependencia de red**: Los resultados dependen de la conectividad con el destino; firewalls, WAFs y CDNs pueden afectar los headers recibidos
 6. **CSP basico**: El analisis de CSP verifica directivas principales pero no evalua la politica completa
 7. **Scope academico**: La herramienta fue desarrollada como proyecto de master y **no debe usarse como unico instrumento de auditoria profesional**
-8. **CVEs limitados**: La base de datos interna contiene solo 20 CVEs. La ausencia de deteccion NO implica que el sitio este libre de vulnerabilidades
+8. **CVEs**: Combina base local (20 CVEs) con consulta en tiempo real a OSV.dev (millones de registros). La consulta a OSV.dev depende de conectividad a Internet. La ausencia de deteccion NO implica que el sitio este libre de vulnerabilidades
 9. **Compliance indicativo**: El mapeo a frameworks normativos es automatico y parcial. No reemplaza una auditoria de compliance real
 10. **Falsos positivos en archivos sensibles**: El escaneo de rutas como `/.env` puede generar falsos positivos. Verificar manualmente cada hallazgo
 11. **Score heuristico**: La ponderacion de headers (CSP=25, HSTS=15, etc.) es una decision de diseno, no un estandar universal

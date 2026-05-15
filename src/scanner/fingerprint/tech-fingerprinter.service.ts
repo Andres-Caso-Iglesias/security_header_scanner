@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import type { DetectedTech, CveInfo, TechFingerprintInfo } from '../../common/interfaces/fingerprint-info.interface';
+import { CveApiService } from './cve-api.service';
 
 interface TechSignature {
   name: string;
@@ -23,7 +24,10 @@ export class TechFingerprinterService {
   private readonly signatures: TechSignature[];
   private readonly cveDb: CveRecord[];
 
-  constructor(private readonly httpService: HttpService) {
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly cveApi: CveApiService,
+  ) {
     this.signatures = this.buildSignatures();
     this.cveDb = this.buildCveDb();
   }
@@ -58,24 +62,42 @@ export class TechFingerprinterService {
     // Deduplicate: keep highest confidence for same tech
     const deduped = this.deduplicate(technologies);
 
-    // Match CVEs
-    const cves: CveInfo[] = [];
+    // Match local CVEs
+    const localCves: CveInfo[] = [];
     for (const tech of deduped) {
       if (!tech.version) continue;
       for (const cve of this.cveDb) {
         if (cve.tech.toLowerCase() === tech.name.toLowerCase() && cve.versionRange(tech.version)) {
-          cves.push({ id: cve.id, description: cve.description, severity: cve.severity, affectedVersions: tech.version });
+          localCves.push({ id: cve.id, description: cve.description, severity: cve.severity, affectedVersions: tech.version });
         }
       }
     }
 
-    const grade = cves.length === 0 ? 1.0 : cves.some((c) => c.severity === 'critical') ? 0.2 : cves.some((c) => c.severity === 'high') ? 0.4 : 0.6;
+    // Query OSV.dev API for each detected technology (in parallel)
+    const osvResults = await Promise.all(
+      deduped.map(async (tech) => {
+        if (!tech.version) return [];
+        return this.cveApi.queryCves(tech.name, tech.version);
+      }),
+    );
+
+    // Merge: local CVEs take precedence, OSV fills gaps
+    const mergedCves = [...localCves];
+    for (const osvCves of osvResults) {
+      for (const osvCve of osvCves) {
+        if (!mergedCves.some((c) => c.id === osvCve.id)) {
+          mergedCves.push(osvCve);
+        }
+      }
+    }
+
+    const grade = mergedCves.length === 0 ? 1.0 : mergedCves.some((c) => c.severity === 'critical') ? 0.2 : mergedCves.some((c) => c.severity === 'high') ? 0.4 : 0.6;
     const techNames = deduped.map((t) => `${t.name}${t.version ? ` ${t.version}` : ''}`).join(', ');
     const summary = deduped.length > 0
-      ? `Detected: ${techNames}${cves.length > 0 ? `. ${cves.length} CVE(s) found` : ''}`
+      ? `Detected: ${techNames}${mergedCves.length > 0 ? `. ${mergedCves.length} CVE(s) found (local + OSV database)` : ''}`
       : 'No specific technologies detected beyond basic server info';
 
-    return { checked: true, technologies: deduped, cves, grade, summary };
+    return { checked: true, technologies: deduped, cves: mergedCves, grade, summary };
   }
 
   private deduplicate(techs: DetectedTech[]): DetectedTech[] {

@@ -144,41 +144,67 @@ async scan(url: string): Promise<ScanResult> {
 
 ### TechFingerprinterService
 
-Servicio de fingerprinting que identifica tecnologias del servidor, CMS, frameworks y runtimes, y las contrasta con una base de datos de CVEs conocidos.
+Servicio de fingerprinting que identifica tecnologias del servidor, CMS, frameworks y runtimes, y las contrasta con CVEs mediante consulta a OSV.dev + base local de respaldo.
 
 **Ubicacion:** `src/scanner/fingerprint/tech-fingerprinter.service.ts`
 
-**Firmas de deteccion (13 tecnologias):**
+**Firmas de deteccion (23 tecnologias):**
 
 | Tecnologia | Categoria | Metodo de deteccion |
 |------------|-----------|---------------------|
 | WordPress | CMS | Meta generator, wp-content paths, wp-json REST API |
 | Joomla | CMS | Meta generator, component/module paths |
 | Drupal | CMS | Meta generator, sites/default paths |
+| Vite | CMS | `<script type="module" src="/@vite/...">` |
+| Next.js | CMS | `__NEXT_DATA__`, headers `x-nextjs-*` |
+| Nuxt.js | CMS | `__NUXT__` script |
 | PHP | Runtime | X-Powered-By header |
 | Express | Framework | X-Powered-By header |
 | ASP.NET | Framework | X-AspNet-Version header, cookies |
 | Laravel | Framework | X-Powered-By header |
 | Django | Framework | X-Powered-By, WSGI server |
+| Ruby on Rails | Framework | X-Rack-Cache, X-Runtime, `_session_id` cookie |
 | Nginx | Server | Server header |
 | Apache | Server | Server header |
+| Tomcat | Server | `Server: Apache-Coyote` |
+| IIS | Server | Server header + X-AspNet-Version |
+| Gunicorn | Server | `Server: gunicorn` |
 | Cloudflare | CDN | cf-ray, cf-cache-status headers |
+| Node.js | Runtime | `connect.sid` cookie, X-Powered-By Express |
+| Python | Runtime | `Server: Python/` |
 | jQuery | Libreria | Script src references en HTML |
 | Bootstrap | Framework | Stylesheet references en HTML |
-
-**Base de datos de CVEs:** 20 CVEs conocidos para WordPress, Joomla, Drupal, PHP, Apache y Nginx, mapeados por rango de version semantica.
-
-> ⚠️ **LIMITACION IMPORTANTE:** Esta base de datos contiene solo 20 CVEs hardcodeados. No se actualiza automaticamente.
-> La ausencia de deteccion de CVEs NO significa que el sitio este libre de vulnerabilidades.
-> No reemplaza herramientas especializadas como Nmap, OpenVAS, Nessus o Snyk.
+| Google Analytics | CMS | Script de analytics |
 
 **Flujo:**
 1. Toma los headers HTTP ya obtenidos por el HttpClientService
 2. Fetch del HTML de la URL (best-effort, tolera fallos)
-3. Ejecuta las 13 firmas de deteccion
+3. Ejecuta las 23 firmas de deteccion
 4. Desduplica tecnologias por nombre (prioriza mayor confianza)
-5. Contrasta versiones detectadas contra la base de datos de CVEs
-6. Calcula grade: 1.0 sin CVEs, 0.2 si hay CVEs critical, 0.4 si high, 0.6 si medium
+5. Contrasta versiones detectadas contra la base de datos local de 20 CVEs
+6. Consulta API de OSV.dev para cada tecnologia con version detectada
+7. Fusiona resultados (locales + OSV), deduplicando por CVE ID
+8. Calcula grade: 1.0 sin CVEs, 0.2 si hay CVEs critical, 0.4 si high, 0.6 si medium
+
+### CveApiService
+
+Servicio que consulta la API pública de OSV.dev (Google Open Source Vulnerabilities) para obtener CVEs actualizados.
+
+**Ubicacion:** `src/scanner/fingerprint/cve-api.service.ts`
+
+**Endpoint:** `POST https://api.osv.dev/v1/query`
+
+**Request:**
+```json
+{ "package": { "name": "nginx" }, "version": "1.24.0" }
+```
+
+**Caracteristicas:**
+- Cache en memoria con TTL de 30 minutos para evitar rate limiting
+- Fallback silencioso: si la API no responde, continua solo con la base local
+- Mapeo de nombres de tecnologia a nombres OSV (ej: "Nginx" → "nginx", "WordPress" → "wordpress")
+- Extraccion de severidad desde CVSS score o database_specific
+- Deduplicacion por CVE ID (prioriza alias CVE sobre IDs de USN/GHSA)
 
 ### SriCheckerService
 
@@ -212,7 +238,12 @@ Servicio que escanea rutas de archivos sensibles en el servidor objetivo para de
 
 **Metodo:** HEAD requests en batches de 5 en paralelo con timeout de 4s. HTTP 200/204 = expuesto. 403/401 = existe pero bloqueado.
 
-**Grade:** 1.0 si no hay expuestos, 0.7 si <=3, 0.4 si <=8, 0.1 si mas.
+**Deteccion de falsos positivos (soft 404):** Cuando se recibe un HTTP 200, se analiza el Content-Type y Content-Length de la respuesta:
+- HTML + tamaño > 500 bytes → probable soft 404 → `confidence: 'low'`
+- HTML + tamaño ≤ 500 bytes → posible página simple → `confidence: 'medium'`
+- JSON, texto plano u otros formatos → exposición real → `confidence: 'high'`
+
+**Grade:** 1.0 si no hay expuestos, 0.7 si ≤3, 0.4 si ≤8, 0.1 si más.
 
 ### SecurityFileCheckerService
 

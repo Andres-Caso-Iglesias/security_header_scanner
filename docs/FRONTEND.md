@@ -67,62 +67,12 @@ Renderiza un grafico circular SVG animado con:
 - Circulo de fondo
 - Arco de progreso coloreado segun el grado (A-F)
 - Texto SVG centrado: letra del grade + puntuacion numerica
-- Subtitulo "SECURITY SCORE" debajo del grafico
-
-### ScanForm
-
-Formulario de entrada con:
-- Input de URL con placeholder
-- Boton "Escanear" con icono SVG de lupa
-- Estado de carga con spinner SVG animado
-- Hero text con descripcion y pills informativas
-
-### MetaSection
-
-Panel superior de resultados que contiene:
-- ScoreCircle (columna izquierda)
-- URL escaneada
-- Grid de metadatos: HTTP Status, Tiempo Respuesta, Headers, TLS, DNS
-- Botones de descarga JSON/PDF con manejo de estado de exportacion
-
-### SslWarning
-
-Banner que aparece cuando el certificado TLS esta expirado (rojo) o proximo a expirar (amarillo). Se oculta si no aplica.
-
-### HeaderGrid
-
-Grid responsive de tarjetas de headers con:
-- Filtro por severidad (Critical/High/Medium/Low/Todas)
-- Cada tarjeta: nombre, badge de severidad, dot de estado, barra de grade, finding, recomendacion
-- Borde izquierdo coloreado por severidad
-
-### TlsSection
-
-Dos columnas: conexion (version TLS, host, grade) y certificado (sujeto, emisor, fechas, SAN).
-
-### DnsSection
-
-Tres tarjetas (SPF, DKIM, DMARC) con estado, valor, finding y recomendacion. Incluye grafico donut de Chart.js mostrando proporcion de registros configurados.
-
-### SriSection
-
-Tarjeta con grafico donut de Chart.js (recursos con/sin SRI), finding, recomendacion y lista de recursos sin integrity.
-
-### FingerprintSection
-
-Grid de tecnologias detectadas con nombre, version, confianza y evidencias. Seccion de CVEs con tarjetas por vulnerabilidad.
-
-### SensitiveSection
-
-Alerta con numero de archivos expuestos y lista de rutas sensibles encontradas.
-
-### RecommendationsSection
-
-Cuatro columnas (CRITICAL, HIGH, MEDIUM, LOW) con items expandibles al hacer click.
+- Subtitulo "SECURITY SCORE" debajo del grafico con **tooltip informativo** (icono `?`) que explica la formula de calculo del score y sus limitaciones
 
 ### ComplianceGrid
 
 Cuatro tarjetas en fila (OWASP, NIS2, ENS, ISO 27001), cada una con score, dots de estado y lista de findings.
+Incluye un **banner de disclaimer** al inicio que advierte: "Mapeo automatico basado solo en headers. No reemplaza una auditoria formal."
 
 ### SecurityFilesSection
 
