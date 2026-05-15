@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { cn } from './lib/cn';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ScanProgress } from './components/ScanProgress';
+import type { ScanStage, ScanStageStatus, StageInfo } from './components/ScanProgress';
 import { ScanForm } from './components/ScanForm';
 import { MetaSection } from './components/MetaSection';
 import { SslWarning } from './components/SslWarning';
@@ -60,6 +62,8 @@ export default function App() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<ScanError | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('headers');
+  const [scanStages, setScanStages] = useState<StageInfo[]>([]);
+  const [scanMessage, setScanMessage] = useState<string | undefined>();
 
   async function handleScan() {
     if (!url.trim()) {
@@ -69,7 +73,60 @@ export default function App() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setScanStages([]);
+    setScanMessage('Iniciando escaneo...');
 
+    // Progress stages tracking
+    const stageMap = new Map<ScanStage, ScanStageStatus>();
+    const allStages: ScanStage[] = [
+      'http', 'tls', 'dns', 'security-files',
+      'sensitive-files', 'sri', 'fingerprint', 'analysis', 'complete',
+    ];
+    allStages.forEach(s => stageMap.set(s, 'pending'));
+
+    try {
+      const eventSource = new EventSource(`/api/scan/stream?url=${encodeURIComponent(url.trim())}`);
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+
+          // Complete scan result
+          if (data.url && data.score !== undefined) {
+            setResult(data as ScanResult);
+            setLoading(false);
+            eventSource.close();
+            return;
+          }
+
+          // Progress event
+          if (data.stage) {
+            stageMap.set(data.stage, data.status);
+            if (data.message) setScanMessage(data.message);
+
+            // Update stages array
+            setScanStages(Array.from(stageMap.entries()).map(([stage, status]) => ({ stage, status })));
+          }
+        } catch {
+          // ignore parse errors on partial events
+        }
+      };
+
+      eventSource.onerror = () => {
+        // If we haven't received results yet and connection closed, try the regular API
+        eventSource.close();
+        if (!result) {
+          fallbackScan();
+        }
+      };
+
+    } catch (e) {
+      // EventSource not supported or other error, use fallback
+      fallbackScan();
+    }
+  }
+
+  async function fallbackScan() {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -117,10 +174,10 @@ export default function App() {
           <ScanForm url={url} loading={loading} onUrlChange={setUrl} onScan={handleScan} />
         )}
 
-        {/* Loading state */}
+        {/* Loading state with progress */}
         {loading && (
           <div className="py-8">
-            <LoadingSkeleton />
+            <ScanProgress stages={scanStages} message={scanMessage} />
           </div>
         )}
 
@@ -240,30 +297,6 @@ export default function App() {
           </div>
         )}
       </main>
-    </div>
-  );
-}
-
-function LoadingSkeleton() {
-  return (
-    <div className="animate-fade-in-up">
-      <div className="flex gap-6 items-center justify-center flex-wrap">
-        <div className="w-[140px] h-[140px] rounded-full skeleton-pulse" />
-        <div className="flex flex-col gap-3">
-          <div className="w-[240px] h-5 rounded-md skeleton-pulse" />
-          <div className="w-[180px] h-3.5 rounded-md skeleton-pulse" />
-          <div className="w-[300px] h-3.5 rounded-md skeleton-pulse" />
-        </div>
-      </div>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mt-8">
-        {[1, 2, 3, 4].map(i => <div key={i} className="h-20 rounded-xl skeleton-pulse" />)}
-      </div>
-      <div className="mt-6">
-        <div className="h-10 rounded-xl skeleton-pulse mb-3" />
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-40 rounded-xl skeleton-pulse" />)}
-        </div>
-      </div>
     </div>
   );
 }

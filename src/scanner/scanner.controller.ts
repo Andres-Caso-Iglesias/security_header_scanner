@@ -1,6 +1,7 @@
-import { Controller, Post, Get, Body, ValidationPipe, HttpCode, HttpStatus, Res } from '@nestjs/common';
+import { Controller, Post, Get, Body, ValidationPipe, HttpCode, HttpStatus, Res, Query, Sse } from '@nestjs/common';
 import { Response } from 'express';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiQuery } from '@nestjs/swagger';
+import { from, map } from 'rxjs';
 import { ScannerService } from './scanner.service';
 import { ExportService } from '../report/export/export.service';
 import { ScanRequestDto } from './dto/scan-request.dto';
@@ -41,6 +42,23 @@ export class ScannerController {
     body: ScanRequestDto,
   ): Promise<ScanResponseDto> {
     return this.scannerService.scan(body.url);
+  }
+
+  @Get('scan/stream')
+  @ApiOperation({
+    summary: 'Stream scan progress via SSE',
+    description:
+      'Returns a Server-Sent Events stream with real-time progress updates as each subsystem completes. The final event contains the complete ScanResult.',
+  })
+  @ApiQuery({ name: 'url', required: true, type: String, description: 'Target URL to scan (must include protocol)' })
+  @Sse()
+  scanStream(@Query('url') url: string) {
+    const stream = this.scannerService.scanStream(url);
+    return stream.pipe(
+      map((data) => ({
+        data: JSON.stringify(data),
+      })),
+    );
   }
 
   @Post('export')
