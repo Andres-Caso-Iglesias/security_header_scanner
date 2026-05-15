@@ -65,6 +65,19 @@ export default function App() {
   const [scanStages, setScanStages] = useState<StageInfo[]>([]);
   const [scanMessage, setScanMessage] = useState<string | undefined>();
 
+  // Simulated progress stages with calibrated timing
+  const PROGRESS_TIMING: { stage: ScanStage; delayMs: number; message: string }[] = [
+    { stage: 'http', delayMs: 300, message: 'Solicitando headers HTTP...' },
+    { stage: 'tls', delayMs: 800, message: 'Verificando conexión TLS...' },
+    { stage: 'dns', delayMs: 1500, message: 'Consultando registros DNS...' },
+    { stage: 'security-files', delayMs: 2500, message: 'Buscando archivos de seguridad...' },
+    { stage: 'sensitive-files', delayMs: 3500, message: 'Escaneando archivos sensibles...' },
+    { stage: 'sri', delayMs: 4500, message: 'Analizando integridad de recursos (SRI)...' },
+    { stage: 'fingerprint', delayMs: 5500, message: 'Identificando tecnologías...' },
+    { stage: 'analysis', delayMs: 7000, message: 'Analizando resultados...' },
+    { stage: 'complete', delayMs: 9000, message: 'Finalizando...' },
+  ];
+
   async function handleScan() {
     if (!url.trim()) {
       setError({ type: 'validation', message: 'Ingresa una URL para escanear', details: 'La URL debe incluir el protocolo (https://...)' });
@@ -74,59 +87,35 @@ export default function App() {
     setError(null);
     setResult(null);
     setScanStages([]);
-    setScanMessage('Iniciando escaneo...');
+    setScanMessage('Conectando...');
 
-    // Progress stages tracking
+    // Initialize all stages as pending
     const stageMap = new Map<ScanStage, ScanStageStatus>();
     const allStages: ScanStage[] = [
       'http', 'tls', 'dns', 'security-files',
       'sensitive-files', 'sri', 'fingerprint', 'analysis', 'complete',
     ];
     allStages.forEach(s => stageMap.set(s, 'pending'));
+    setScanStages(allStages.map(s => ({ stage: s, status: 'pending' as ScanStageStatus })));
 
-    try {
-      const eventSource = new EventSource(`/api/scan/stream?url=${encodeURIComponent(url.trim())}`);
+    // Start simulated progress
+    const simTimers: ReturnType<typeof setTimeout>[] = [];
 
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-
-          // Complete scan result
-          if (data.url && data.score !== undefined) {
-            setResult(data as ScanResult);
-            setLoading(false);
-            eventSource.close();
-            return;
-          }
-
-          // Progress event
-          if (data.stage) {
-            stageMap.set(data.stage, data.status);
-            if (data.message) setScanMessage(data.message);
-
-            // Update stages array
-            setScanStages(Array.from(stageMap.entries()).map(([stage, status]) => ({ stage, status })));
-          }
-        } catch {
-          // ignore parse errors on partial events
-        }
-      };
-
-      eventSource.onerror = () => {
-        // If we haven't received results yet and connection closed, try the regular API
-        eventSource.close();
-        if (!result) {
-          fallbackScan();
-        }
-      };
-
-    } catch (e) {
-      // EventSource not supported or other error, use fallback
-      fallbackScan();
+    function updateStage(stage: ScanStage, status: ScanStageStatus, message?: string) {
+      stageMap.set(stage, status);
+      if (message) setScanMessage(message);
+      setScanStages(Array.from(stageMap.entries()).map(([s, st]) => ({ stage: s, status: st })));
     }
-  }
 
-  async function fallbackScan() {
+    // Schedule progressive stage completions
+    for (const p of PROGRESS_TIMING) {
+      const timer = setTimeout(() => updateStage(p.stage, 'scanning', p.message), p.delayMs * 0.5);
+      simTimers.push(timer);
+      const doneTimer = setTimeout(() => updateStage(p.stage, 'complete'), p.delayMs);
+      simTimers.push(doneTimer);
+    }
+
+    // Real scan via POST /api/scan
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -145,11 +134,19 @@ export default function App() {
         setError(classifyError(errMsg));
         return;
       }
+
+      // Mark all stages complete and show results immediately
+      allStages.forEach(s => stageMap.set(s, 'complete'));
+      setScanStages(allStages.map(s => ({ stage: s, status: 'complete' })));
+      setScanMessage('Escaneo completado');
       setResult(data as ScanResult);
+      setLoading(false);
     } catch (e) {
       setError(classifyError(e));
     } finally {
-      setLoading(false);
+      // Cleanup sim timers
+      simTimers.forEach(t => clearTimeout(t));
+      if (!result) setLoading(false);
     }
   }
 
