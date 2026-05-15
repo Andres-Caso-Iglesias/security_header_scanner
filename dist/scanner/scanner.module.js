@@ -23,6 +23,7 @@ const export_service_1 = require("../report/export/export.service");
 const analyzer_module_1 = require("../analyzer/analyzer.module");
 const compliance_module_1 = require("../compliance/compliance.module");
 const report_module_1 = require("../report/report.module");
+const timeout_config_1 = require("../common/constants/timeout.config");
 let ScannerModule = class ScannerModule {
 };
 exports.ScannerModule = ScannerModule;
@@ -30,7 +31,7 @@ exports.ScannerModule = ScannerModule = __decorate([
     (0, common_1.Module)({
         imports: [
             axios_1.HttpModule.register({
-                timeout: 10000,
+                timeout: timeout_config_1.TIMEOUTS.HTTP_CLIENT,
                 maxRedirects: 5,
             }),
             analyzer_module_1.AnalyzerModule,

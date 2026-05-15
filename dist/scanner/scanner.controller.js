@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScannerController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
+const rxjs_1 = require("rxjs");
 const scanner_service_1 = require("./scanner.service");
 const export_service_1 = require("../report/export/export.service");
 const scan_request_dto_1 = require("./dto/scan-request.dto");
@@ -29,6 +30,12 @@ let ScannerController = class ScannerController {
     }
     async scan(body) {
         return this.scannerService.scan(body.url);
+    }
+    scanStream(url) {
+        const stream = this.scannerService.scanStream(url);
+        return stream.pipe((0, rxjs_1.map)((data) => ({
+            data: JSON.stringify(data),
+        })));
     }
     async export(body, res) {
         const result = await this.scannerService.scan(body.url);
@@ -76,6 +83,19 @@ __decorate([
     __metadata("design:paramtypes", [scan_request_dto_1.ScanRequestDto]),
     __metadata("design:returntype", Promise)
 ], ScannerController.prototype, "scan", null);
+__decorate([
+    (0, common_1.Get)('scan/stream'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Stream scan progress via SSE',
+        description: 'Returns a Server-Sent Events stream with real-time progress updates as each subsystem completes. The final event contains the complete ScanResult.',
+    }),
+    (0, swagger_1.ApiQuery)({ name: 'url', required: true, type: String, description: 'Target URL to scan (must include protocol)' }),
+    (0, common_1.Sse)(),
+    __param(0, (0, common_1.Query)('url')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], ScannerController.prototype, "scanStream", null);
 __decorate([
     (0, common_1.Post)('export'),
     (0, swagger_1.ApiOperation)({

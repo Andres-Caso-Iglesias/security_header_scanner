@@ -10,9 +10,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TlsCheckerService = void 0;
 const common_1 = require("@nestjs/common");
 const tls = require("tls");
+const timeout_config_1 = require("../../common/constants/timeout.config");
 let TlsCheckerService = TlsCheckerService_1 = class TlsCheckerService {
     logger = new common_1.Logger(TlsCheckerService_1.name);
-    timeoutMs = 8000;
+    timeoutMs = timeout_config_1.TIMEOUTS.TLS;
     defaultPort = 443;
     async check(hostname, port) {
         const targetPort = port ?? this.defaultPort;

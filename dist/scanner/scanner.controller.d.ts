@@ -9,5 +9,6 @@ export declare class ScannerController {
     private readonly exportService;
     constructor(scannerService: ScannerService, exportService: ExportService);
     scan(body: ScanRequestDto): Promise<ScanResponseDto>;
+    scanStream(url: string): import("rxjs").Observable<unknown>;
     export(body: ExportRequestDto, res: Response): Promise<void>;
 }

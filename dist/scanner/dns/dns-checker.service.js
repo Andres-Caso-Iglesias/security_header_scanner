@@ -10,9 +10,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DnsCheckerService = void 0;
 const common_1 = require("@nestjs/common");
 const dns = require("dns/promises");
+const timeout_config_1 = require("../../common/constants/timeout.config");
 let DnsCheckerService = DnsCheckerService_1 = class DnsCheckerService {
     logger = new common_1.Logger(DnsCheckerService_1.name);
-    timeoutMs = 5000;
+    timeoutMs = timeout_config_1.TIMEOUTS.DNS;
     async check(hostname) {
         try {
             const [spf, dkim, dmarc] = await Promise.all([

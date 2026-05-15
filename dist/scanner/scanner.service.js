@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScannerService = void 0;
 const common_1 = require("@nestjs/common");
+const rxjs_1 = require("rxjs");
 const http_client_service_1 = require("./http-client/http-client.service");
 const tls_checker_service_1 = require("./tls/tls-checker.service");
 const dns_checker_service_1 = require("./dns/dns-checker.service");
@@ -67,6 +68,89 @@ let ScannerService = class ScannerService {
             this.techFingerprinter.fingerprint(httpResult.headers, url),
         ]);
         const complianceResult = this.compliance.evaluate(analysisResult.headers, tlsResult, dnsResult, securityFilesResult, fingerprintResult);
+        return this.report.generate({
+            url,
+            headers: analysisResult,
+            compliance: complianceResult,
+            metadata: {
+                responseTime: httpResult.responseTime,
+                statusCode: httpResult.statusCode,
+                analyzedAt: new Date().toISOString(),
+            },
+            tls: tlsResult,
+            dns: dnsResult,
+            securityFiles: securityFilesResult,
+            sri: sriResult,
+            sensitiveFiles: sensitiveFilesResult,
+            fingerprint: fingerprintResult,
+        });
+    }
+    scanStream(url) {
+        const subject = new rxjs_1.Subject();
+        this.runScanWithProgress(url, subject).catch((err) => {
+            subject.error(err);
+        });
+        return subject.asObservable();
+    }
+    emit(subject, event) {
+        subject.next(event);
+    }
+    async runScanWithProgress(url, subject) {
+        const parsedUrl = new URL(url);
+        const hostname = parsedUrl.hostname;
+        const port = parsedUrl.port ? parseInt(parsedUrl.port, 10) : 443;
+        const protocol = parsedUrl.protocol;
+        const baseOrigin = `${protocol}//${hostname}${parsedUrl.port ? `:${parsedUrl.port}` : ''}`;
+        this.emit(subject, { stage: 'http', status: 'scanning', message: 'Solicitando headers HTTP...' });
+        const httpPromise = this.httpClient.fetch(url).then((r) => {
+            this.emit(subject, { stage: 'http', status: 'complete' });
+            return r;
+        });
+        this.emit(subject, { stage: 'tls', status: 'scanning', message: 'Verificando conexión TLS...' });
+        const tlsPromise = protocol === 'https:'
+            ? this.tlsChecker.check(hostname, port).then((r) => {
+                this.emit(subject, { stage: 'tls', status: 'complete' });
+                return r;
+            })
+            : Promise.resolve({
+                checked: false, hostname, port,
+                error: 'TLS check only applies to HTTPS URLs',
+                tlsVersion: null, certificate: null, grade: 0,
+            }).then((r) => {
+                this.emit(subject, { stage: 'tls', status: 'complete' });
+                return r;
+            });
+        this.emit(subject, { stage: 'dns', status: 'scanning', message: 'Consultando registros DNS...' });
+        const dnsPromise = this.dnsChecker.check(hostname).then((r) => {
+            this.emit(subject, { stage: 'dns', status: 'complete' });
+            return r;
+        });
+        this.emit(subject, { stage: 'security-files', status: 'scanning', message: 'Buscando archivos de seguridad...' });
+        const secFilesPromise = this.securityFileChecker.check(baseOrigin).then((r) => {
+            this.emit(subject, { stage: 'security-files', status: 'complete' });
+            return r;
+        });
+        this.emit(subject, { stage: 'sensitive-files', status: 'scanning', message: 'Escaneando archivos sensibles...' });
+        const sensFilesPromise = this.sensitiveFileChecker.check(baseOrigin).then((r) => {
+            this.emit(subject, { stage: 'sensitive-files', status: 'complete' });
+            return r;
+        });
+        this.emit(subject, { stage: 'sri', status: 'scanning', message: 'Analizando integridad de recursos (SRI)...' });
+        const sriPromise = this.sriChecker.check(url).then((r) => {
+            this.emit(subject, { stage: 'sri', status: 'complete' });
+            return r;
+        });
+        const httpResult = await httpPromise;
+        this.emit(subject, { stage: 'fingerprint', status: 'scanning', message: 'Identificando tecnologías...' });
+        const fpPromise = this.techFingerprinter.fingerprint(httpResult.headers, url).then((r) => {
+            this.emit(subject, { stage: 'fingerprint', status: 'complete' });
+            return r;
+        });
+        const [tlsResult, dnsResult, securityFilesResult, sriResult, sensitiveFilesResult, fingerprintResult] = await Promise.all([tlsPromise, dnsPromise, secFilesPromise, sriPromise, sensFilesPromise, fpPromise]);
+        this.emit(subject, { stage: 'analysis', status: 'scanning', message: 'Analizando resultados...' });
+        const analysisResult = await this.analyzer.analyze(httpResult.headers);
+        const complianceResult = this.compliance.evaluate(analysisResult.headers, tlsResult, dnsResult, securityFilesResult, fingerprintResult);
+        this.emit(subject, { stage: 'analysis', status: 'complete' });
         const report = this.report.generate({
             url,
             headers: analysisResult,
@@ -83,7 +167,9 @@ let ScannerService = class ScannerService {
             sensitiveFiles: sensitiveFilesResult,
             fingerprint: fingerprintResult,
         });
-        return report;
+        this.emit(subject, { stage: 'complete', status: 'complete', message: 'Escaneo completado' });
+        subject.next(report);
+        subject.complete();
     }
 };
 exports.ScannerService = ScannerService;
