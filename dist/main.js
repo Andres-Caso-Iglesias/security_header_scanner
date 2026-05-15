@@ -20,6 +20,7 @@ async function bootstrap() {
         'provides security scoring (A-F), and maps findings to OWASP Top 10 and NIS2 compliance frameworks.')
         .setVersion('1.0')
         .addTag('Scanner', 'Security header scanning operations')
+        .addApiKey({ type: 'apiKey', in: 'header', name: 'X-API-Key', description: 'API key for authentication. Leave empty to disable.' }, 'X-API-Key')
         .build();
     const document = swagger_1.SwaggerModule.createDocument(app, config);
     swagger_1.SwaggerModule.setup('api/docs', app, document);

@@ -1,14 +1,18 @@
-import { Controller, Post, Get, Body, ValidationPipe, HttpCode, HttpStatus, Res, Query, Sse } from '@nestjs/common';
+import { Controller, Post, Get, Body, ValidationPipe, HttpCode, HttpStatus, Res, Query, Sse, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiQuery, ApiSecurity } from '@nestjs/swagger';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { from, map } from 'rxjs';
 import { ScannerService } from './scanner.service';
 import { ExportService } from '../report/export/export.service';
 import { ScanRequestDto } from './dto/scan-request.dto';
 import { ExportRequestDto } from './dto/export-request.dto';
 import { ScanResponseDto } from './dto/scan-response.dto';
+import { ApiKeyGuard } from '../common/guards/api-key.guard';
 
 @ApiTags('Scanner')
+@ApiSecurity('X-API-Key')
+@UseGuards(ApiKeyGuard)
 @Controller('api')
 export class ScannerController {
   constructor(
@@ -17,6 +21,7 @@ export class ScannerController {
   ) {}
 
   @Post('scan')
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'Scan a URL for security headers',
     description:
@@ -62,6 +67,7 @@ export class ScannerController {
   }
 
   @Post('export')
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'Scan a URL and export the report as PDF or JSON',
     description:

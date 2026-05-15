@@ -27,7 +27,11 @@ import { TIMEOUTS } from '../common/constants/timeout.config';
     ReportModule,
   ],
   controllers: [ScannerController],
-  providers: [ScannerService, HttpClientService, TlsCheckerService, DnsCheckerService, SecurityFileCheckerService, SensitiveFileCheckerService, SriCheckerService, TechFingerprinterService, CveApiService, ExportService],
+  providers: [
+    ScannerService, HttpClientService, TlsCheckerService, DnsCheckerService,
+    SecurityFileCheckerService, SensitiveFileCheckerService, SriCheckerService,
+    TechFingerprinterService, CveApiService, ExportService,
+  ],
   exports: [ScannerService],
 })
 export class ScannerModule {}

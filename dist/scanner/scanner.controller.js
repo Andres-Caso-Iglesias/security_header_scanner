@@ -15,12 +15,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScannerController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
+const throttler_1 = require("@nestjs/throttler");
 const rxjs_1 = require("rxjs");
 const scanner_service_1 = require("./scanner.service");
 const export_service_1 = require("../report/export/export.service");
 const scan_request_dto_1 = require("./dto/scan-request.dto");
 const export_request_dto_1 = require("./dto/export-request.dto");
 const scan_response_dto_1 = require("./dto/scan-response.dto");
+const api_key_guard_1 = require("../common/guards/api-key.guard");
 let ScannerController = class ScannerController {
     scannerService;
     exportService;
@@ -59,6 +61,7 @@ let ScannerController = class ScannerController {
 exports.ScannerController = ScannerController;
 __decorate([
     (0, common_1.Post)('scan'),
+    (0, common_1.UseGuards)(throttler_1.ThrottlerGuard),
     (0, swagger_1.ApiOperation)({
         summary: 'Scan a URL for security headers',
         description: 'Fetches HTTP response headers from the target URL and analyzes them against OWASP security best practices. Returns a comprehensive security report with score, compliance mappings, and recommendations.',
@@ -98,6 +101,7 @@ __decorate([
 ], ScannerController.prototype, "scanStream", null);
 __decorate([
     (0, common_1.Post)('export'),
+    (0, common_1.UseGuards)(throttler_1.ThrottlerGuard),
     (0, swagger_1.ApiOperation)({
         summary: 'Scan a URL and export the report as PDF or JSON',
         description: 'Performs a full security scan and returns the report as a downloadable file in the requested format (PDF or JSON).',
@@ -123,6 +127,8 @@ __decorate([
 ], ScannerController.prototype, "export", null);
 exports.ScannerController = ScannerController = __decorate([
     (0, swagger_1.ApiTags)('Scanner'),
+    (0, swagger_1.ApiSecurity)('X-API-Key'),
+    (0, common_1.UseGuards)(api_key_guard_1.ApiKeyGuard),
     (0, common_1.Controller)('api'),
     __metadata("design:paramtypes", [scanner_service_1.ScannerService,
         export_service_1.ExportService])

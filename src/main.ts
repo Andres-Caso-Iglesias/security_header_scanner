@@ -26,6 +26,10 @@ async function bootstrap() {
     )
     .setVersion('1.0')
     .addTag('Scanner', 'Security header scanning operations')
+    .addApiKey(
+      { type: 'apiKey', in: 'header', name: 'X-API-Key', description: 'API key for authentication. Leave empty to disable.' },
+      'X-API-Key',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
