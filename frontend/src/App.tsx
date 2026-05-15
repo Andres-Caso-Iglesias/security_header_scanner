@@ -159,7 +159,7 @@ export default function App() {
           <span className="font-bold text-lg text-white">Auditoría de Seguridad Web</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500">v2.0</span>
+          <span className="text-xs text-slate-500">v2.1</span>
           <span className="w-2 h-2 rounded-full bg-[var(--color-accent-green)] inline-block" />
           <span className="text-xs text-slate-400">Online</span>
         </div>
