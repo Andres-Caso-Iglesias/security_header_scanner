@@ -25,6 +25,8 @@ Documentacion tecnica del frontend de la herramienta de auditoria de seguridad w
 | TypeScript | 6 | Tipado |
 | Tailwind CSS | 4 | Estilos (utility-first) |
 | Chart.js | 4 | Graficos (donut de DNS y SRI) |
+| Vitest | 3 | Testing unitario |
+| React Testing Library | 16 | Testing de componentes |
 
 ## Estructura
 
@@ -32,15 +34,22 @@ Documentacion tecnica del frontend de la herramienta de auditoria de seguridad w
 frontend/
 ├── index.html              # HTML base (con Inter font)
 ├── vite.config.ts          # Configuracion Vite + Tailwind plugin + proxy
+├── vitest.config.ts        # Configuracion Vitest (jsdom, setup)
+├── nginx.conf              # Configuracion Nginx para Docker
+├── Dockerfile              # Multi-stage build + Nginx
 ├── package.json
 ├── src/
 │   ├── main.tsx            # Entry point (ReactDOM.createRoot)
 │   ├── index.css           # Tailwind import + tema + animaciones
-│   ├── App.tsx             # Orquestador principal
+│   ├── App.tsx             # Orquestador principal (14 componentes)
 │   ├── types.ts            # Interfaces del dominio
 │   ├── lib/
 │   │   └── cn.ts           # Utilidad clsx + tailwind-merge
-│   └── components/         # 13 componentes
+│   ├── test/
+│   │   ├── setup.ts        # Config de testing (@testing-library/jest-dom)
+│   │   ├── mock-data.ts    # Datos mock para tests
+│   │   └── components/     # 26 tests, 5 archivos
+│   └── components/         # 14 componentes
 │       ├── ScoreCircle.tsx
 │       ├── ScanForm.tsx
 │       ├── MetaSection.tsx
@@ -53,7 +62,9 @@ frontend/
 │       ├── SensitiveSection.tsx
 │       ├── RecommendationsSection.tsx
 │       ├── ComplianceGrid.tsx
-│       └── SecurityFilesSection.tsx
+│       ├── SecurityFilesSection.tsx
+│       ├── ScanProgress.tsx
+│       └── ErrorBoundary.tsx
 └── dist/                   # Build de produccion
 ```
 
@@ -73,6 +84,22 @@ Renderiza un grafico circular SVG animado con:
 
 Cuatro tarjetas en fila (OWASP, NIS2, ENS, ISO 27001), cada una con score, dots de estado y lista de findings.
 Incluye un **banner de disclaimer** al inicio que advierte: "Mapeo automatico basado solo en headers. No reemplaza una auditoria formal."
+
+### ScanProgress
+
+Componente de carga progresiva que muestra el estado en tiempo real de cada etapa del escaneo:
+- Barra de progreso animada con porcentaje
+- Lista de 9 etapas con indicador visual: pendiente (circulo), escaneando (spinner SVG), completado (checkmark)
+- Mensaje contextual que describe la operacion actual
+- Transicion automatica a resultados cuando el scan finaliza
+
+### ErrorBoundary
+
+Wrapper que captura errores de renderizado en componentes hijos. Cada tab del dashboard esta envuelto en su propio ErrorBoundary:
+- Muestra mensaje de error especifico para la seccion fallida
+- Boton "Reintentar" que resetea el estado
+- Los demas tabs continuan funcionando sin interrupcion
+- Implementado como clase de React (componentDidCatch)
 
 ### SecurityFilesSection
 

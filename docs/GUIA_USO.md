@@ -471,6 +471,18 @@ Las calificaciones bajas generalmente se deben a:
 
 Revise las recomendaciones del reporte para identificar que headers corregir primero.
 
+### Necesito una API Key para usar la herramienta?
+
+Depende de como este configurado el servidor:
+- **Sin API Key (default)**: acceso libre a todos los endpoints
+- **Con API Key**: todas las requests deben incluir el header `X-API-Key`
+
+Si ves errores `401 Unauthorized`, contacta al administrador del servidor para obtener una API Key.
+
+### Por que veo "429 Too Many Requests"?
+
+El servidor tiene un limite de 20 requests por minuto por direccion IP. Espera un minuto y vuelve a intentar. Este limite es configurable por el administrador del servidor.
+
 ### Que significa un grade de 1.0 en CORS o Set-Cookie cuando el header esta ausente?
 
 En el caso de CORS y Set-Cookie, la ausencia del header se considera segura:

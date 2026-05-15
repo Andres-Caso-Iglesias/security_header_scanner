@@ -1,4 +1,4 @@
-# Auditoría de Seguridad Web v2.0
+# Auditoría de Seguridad Web v2.1
 
 > **PROYECTO ACADÉMICO — ADVERTENCIA**
 >
@@ -16,9 +16,14 @@ Herramienta de análisis pasivo de seguridad web que examina los headers HTTP de
 - [Limitaciones Conocidas](#limitaciones-conocidas)
 - [Requerimientos](#requerimientos)
 - [Inicio Rápido](#inicio-rápido)
+  - [Con Docker](#con-docker)
+  - [Sin Docker (desarrollo local)](#sin-docker-desarrollo-local)
+  - [Con API Key](#con-api-key)
+- [Seguridad de la API](#seguridad-de-la-api)
 - [Estructura del Proyecto](#estructura-del-proyecto)
 - [Documentación](#documentación)
 - [Testing](#testing)
+- [Headers Analizados](#headers-analizados)
 - [Licencia](#licencia)
 
 ## Descripción General
@@ -32,24 +37,24 @@ La herramienta recibe una URL vía API REST, realiza una petición HTTP a la mis
 | **Headers HTTP** | Presencia, valor y configuración de 15 headers | Vulnerabilidades XSS, SQLi en el contenido |
 | **TLS/SSL** | Versión del protocolo, datos del certificado | Configuración de cifrado, vulnerabilidades TLS |
 | **DNS** | Registros SPF, DKIM, DMARC | Seguridad del servidor DNS, DNSSEC |
-| **Archivos sensibles** | Accesibilidad HTTP de 40 rutas comunes | Contenido real de los archivos (puede dar falsos positivos) |
-| **Fingerprinting** | 23 tecnologías detectables + consulta CVEs en tiempo real via OSV.dev | Versiones exactas no verificadas |
-| **CVEs** | 20 CVEs locales + consulta en tiempo real a OSV.dev (Google Open Source Vulnerabilities — millones de registros) | Vulnerabilidades no cubiertas por OSV, dependencia de conectividad a Internet |
-| **Compliance** | Mapeo automático basado en headers | Auditoría de compliance real (mucho más amplia) |
+| **Archivos sensibles** | 40 rutas comunes con detección de soft 404 | Contenido real de los archivos |
+| **Fingerprinting** | 23 tecnologías detectables | Versiones exactas no verificadas |
+| **CVEs** | Base local (20) + OSV.dev en tiempo real | Vulnerabilidades no cubiertas por OSV |
+| **Compliance** | Mapeo automático basado en headers | Auditoría de compliance real |
 
 ### Casos de uso apropiados
 
-- Formación académica en ciberseguridad
-- Demostración de conceptos de seguridad web
-- Verificación rápida e informal de headers HTTP
-- Proyectos personales y experimentación
+- ✅ Formación académica en ciberseguridad
+- ✅ Demostración de conceptos de seguridad web
+- ✅ Verificación rápida e informal de headers HTTP
+- ✅ Proyectos personales y experimentación
 
 ### Casos de uso INAPROPIADOS
 
-- Auditorías de seguridad profesionales o contractuales
-- Toma de decisiones sin verificación manual
-- Evaluación de cumplimiento normativo formal
-- Herramienta única en un proceso de pentesting
+- ❌ Auditorías de seguridad profesionales o contractuales
+- ❌ Toma de decisiones sin verificación manual
+- ❌ Evaluación de cumplimiento normativo formal
+- ❌ Herramienta única en un proceso de pentesting
 
 ## Stack Tecnológico
 
@@ -62,6 +67,9 @@ La herramienta recibe una URL vía API REST, realiza una petición HTTP a la mis
 | Lenguaje | TypeScript 5 |
 | HTTP Client | Axios (via @nestjs/axios 4) |
 | Validación | class-validator + class-transformer |
+| Rate Limiting | @nestjs/throttler (20 req/min por IP) |
+| Autenticación | API Key via header `X-API-Key` |
+| Logging | Middleware HTTP con duración y origen |
 | Documentación API | Swagger / OpenAPI (via @nestjs/swagger) |
 | Testing | Jest + supertest |
 | Export PDF | PDFKit |
@@ -73,8 +81,17 @@ La herramienta recibe una URL vía API REST, realiza una petición HTTP a la mis
 | Framework | React 19 |
 | Bundler | Vite 8 |
 | Estilos | Tailwind CSS 4 |
-| Gráficos | Chart.js |
+| Gráficos | Chart.js 4 |
+| Testing | Vitest + React Testing Library (26 tests) |
 | Lenguaje | TypeScript 6 |
+
+### DevOps
+
+| Componente | Tecnología |
+|------------|------------|
+| Contenedores | Docker + Docker Compose |
+| Proxy Frontend | Nginx (con soporte SSE) |
+| Script Local | `start.sh` |
 
 ## Limitaciones Conocidas
 
@@ -90,9 +107,9 @@ El mapeo a OWASP Top 10, NIS2, ENS e ISO 27001 es **automático y basado exclusi
 
 La detección de CVEs combina:
 - **Base local**: 20 CVEs hardcodeados como respaldo offline
-- **API OSV.dev**: consulta en tiempo real a la base de datos de Open Source Vulnerabilities de Google (millones de registros)
+- **API OSV.dev**: consulta en tiempo real a la base de datos de Open Source Vulnerabilities de Google
 
-La consulta a OSV.dev depende de conectividad a Internet. Si la API no responde (timeout, error de red), se utiliza solo la base local. **La ausencia de CVEs detectados no implica que el sitio esté libre de vulnerabilidades.** No reemplaza herramientas como Nmap, OpenVAS, Nessus o Snyk.
+La consulta a OSV.dev depende de conectividad a Internet. Si la API no responde (timeout, error de red), se utiliza solo la base local. **La ausencia de CVEs detectados no implica que el sitio esté libre de vulnerabilidades.**
 
 ### 4. Score Numérico Heurístico
 
@@ -100,7 +117,7 @@ El score 0-100 se basa en pesos asignados por decisión de diseño (CSP=25, HSTS
 
 ### 5. Falsos Positivos en Archivos Sensibles
 
-El escaneo de archivos sensibles puede reportar **falsos positivos**: servidores que devuelven HTTP 200 con contenido genérico (soft 404) en rutas como `/.env` o `/.git/config`. Verificar manualmente cada hallazgo antes de actuar.
+El escaneo de archivos sensibles incluye detección de soft 404 (analiza Content-Type y Content-Length). Sin embargo, puede reportar falsos positivos. Verificar manualmente cada hallazgo antes de actuar.
 
 ### 6. Sin Autenticación ni Sesiones
 
@@ -108,95 +125,129 @@ La herramienta no soporta escaneo detrás de login, formularios de autenticació
 
 ### 7. Dependencia de Red
 
-Los resultados dependen de:
-- La conectividad con el servidor destino
-- Firewalls, WAFs y CDNs que pueden modificar headers
-- La resolución DNS del entorno donde se ejecute
-- Timeouts y latencia de red
+Los resultados dependen de la conectividad con el servidor destino, firewalls, WAFs, CDNs, resolución DNS, y latencia de red.
 
 ## Requerimientos
 
-- Node.js >= 18
-- npm >= 9
+- Node.js >= 18 (sin Docker)
+- npm >= 9 (sin Docker)
+- Docker + Docker Compose (con Docker)
 - Conexión a internet (para escanear URLs externas)
 
 ## Inicio Rápido
 
+### Con Docker
+
 ```bash
-# 1. Instalar dependencias del backend
+# Clonar y levantar
 cd auditoria-web
+docker compose up -d
+
+# Frontend: http://localhost:5173
+# Backend:  http://localhost:3000
+# Swagger:  http://localhost:3000/api/docs
+
+# Para detener
+docker compose down
+
+# Ver logs
+docker compose logs -f
+```
+
+### Sin Docker (desarrollo local)
+
+```bash
+# Usar script automático
+./start.sh
+
+# O manualmente:
+# 1. Backend
 npm install
 npm run build
+node dist/main.js              # Puerto 3000
 
-# 2. Iniciar el backend (puerto 3000)
-node dist/main.js
-
-# 3. En otra terminal, instalar e iniciar el frontend
+# 2. Frontend (otra terminal)
 cd frontend
 npm install
-npm run dev     # Puerto 5173 con proxy a :3000
+npm run dev                    # Puerto 5173
 ```
 
-La aplicación queda accesible en:
-- Frontend: http://localhost:5173
-- API: http://localhost:3000/api/scan
-- Exportación: http://localhost:3000/api/export
-- Documentación Swagger: http://localhost:3000/api/docs
+### Con API Key
 
-### Uso con curl (sin frontend)
+Si se configura una API Key, todas las requests a `/api/*` deben incluir el header:
 
 ```bash
-# Escanear y ver resultado en JSON
+# Docker
+API_KEY=mi-clave-secreta docker compose up -d
+
+# Sin Docker
+API_KEY=mi-clave-secreta node dist/main.js
+
+# Uso
 curl -X POST http://localhost:3000/api/scan \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: mi-clave-secreta" \
   -d '{"url":"https://example.com"}'
-
-# Exportar reporte PDF
-curl -X POST http://localhost:3000/api/export \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://example.com","format":"pdf"}' \
-  --output reporte.pdf
 ```
+
+## Seguridad de la API
+
+| Protección | Descripción | Configuración |
+|-----------|-------------|---------------|
+| **API Key** | Header `X-API-Key` requerido en todos los endpoints | `API_KEY` env var. Vacío = deshabilitado |
+| **Rate Limiting** | Máximo 20 requests por minuto por IP | `RATE_LIMIT_MAX` y `RATE_LIMIT_WINDOW_MS` env vars |
+| **Logging** | Cada request se registra con método, ruta, status, duración e IP | Automático. Sin configuración |
 
 ## Estructura del Proyecto
 
 ```
 auditoria-web/
 ├── src/                          # Backend NestJS
-│   ├── main.ts                   # Bootstrap + Swagger
-│   ├── app.module.ts             # Módulo raíz
-│   ├── common/                   # Interfaces, constantes, filtros, pipes
-│   ├── scanner/                  # Controller, DTOs, HTTP client, TLS, DNS, files, content, fingerprint
+│   ├── main.ts                   # Bootstrap + Swagger + API Key scheme
+│   ├── app.module.ts             # Módulo raíz + ThrottlerModule + RequestLogger
+│   ├── common/
+│   │   ├── config/               # Seguridad, timeouts (via env vars)
+│   │   ├── guards/               # ApiKeyGuard
+│   │   ├── middleware/           # RequestLoggerMiddleware
+│   │   ├── interfaces/           # Tipos compartidos
+│   │   ├── constants/            # Timeout.config, header-weights
+│   │   ├── filters/              # Global exception filter
+│   │   └── pipes/                # URL validation
+│   ├── scanner/                  # Controller, DTOs, HTTP client, TLS, DNS, files, SRI, fingerprint
+│   │   └── fingerprint/          # Tech detection (23 firmas) + CveApiService (OSV.dev)
 │   ├── analyzer/                 # Score calculator + 15 header checkers
 │   ├── compliance/               # Mappers OWASP, NIS2, ENS, ISO 27001
-│   └── report/                   # Export PDF/JSON + generación de reportes
+│   └── report/                   # Export PDF/JSON
 ├── test/                         # Tests unitarios (83) y e2e
-├── frontend/                     # Frontend React + Vite + Tailwind
+├── frontend/                     # React 19 + Vite 8 + Tailwind 4
 │   └── src/
-│       ├── components/           # 13 componentes React
+│       ├── components/           # 14 componentes (ScoreCircle, HeaderGrid, ScanProgress, ErrorBoundary...)
 │       ├── lib/cn.ts             # Utilidad Tailwind
-│       └── types.ts              # Interfaces TypeScript
-├── docs/                         # Documentación detallada
-└── package.json
+│       ├── types.ts              # Interfaces TypeScript
+│       └── test/                 # 26 tests con Vitest + RTL
+├── Dockerfile                    # Backend multi-stage
+├── docker-compose.yml            # Backend + Frontend + network
+├── start.sh                      # Script desarrollo local
+└── docs/                         # Documentación detallada
 ```
 
 ## Documentación
 
-- [docs/BACKEND.md](docs/BACKEND.md): Arquitectura del backend, módulos, checkers, scoring, API
-- [docs/FRONTEND.md](docs/FRONTEND.md): Frontend React + Vite + Tailwind, componentes
+- [docs/BACKEND.md](docs/BACKEND.md): Arquitectura del backend, módulos, checkers, scoring, API, seguridad
+- [docs/FRONTEND.md](docs/FRONTEND.md): Frontend React + Vite + Tailwind, componentes, testing
 - [docs/GUIA_USO.md](docs/GUIA_USO.md): Guía de uso e interpretación de resultados
 
 ## Testing
 
 ```bash
-# Tests unitarios (83 tests, 19 suites)
+# Backend (83 tests)
 npm test
-
-# Tests e2e
 npm run test:e2e
-
-# Cobertura
 npm run test:cov
+
+# Frontend (26 tests)
+cd frontend
+npm test
 ```
 
 ## Headers Analizados
