@@ -6,8 +6,11 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { CORS_CONFIG } from './common/config/cors.config';
 import { HELMET_CONFIG } from './common/config/helmet.config';
+import { validateEnv } from './common/config/env.schema';
 
 async function bootstrap() {
+  const env = validateEnv();
+
   const app = await NestFactory.create(AppModule, {
     cors: CORS_CONFIG,
   });
@@ -24,7 +27,16 @@ async function bootstrap() {
 
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  const config = new DocumentBuilder()
+  app.getHttpAdapter().get('/', (_req: any, res: any) => {
+    res.json({
+      name: 'Auditoría de Seguridad Web API',
+      version: '1.0',
+      docs: '/api/docs',
+      health: '/health',
+    });
+  });
+
+  const swaggerConfig = new DocumentBuilder()
     .setTitle('Auditoría de Seguridad Web - API')
     .setDescription(
       'Passive HTTP Security Header Scanner API. ' +
@@ -39,11 +51,11 @@ async function bootstrap() {
     )
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
 
-  await app.listen(process.env.PORT ?? 3000);
-  console.log(`Application is running on: http://localhost:${process.env.PORT ?? 3000}`);
-  console.log(`Swagger docs: http://localhost:${process.env.PORT ?? 3000}/api/docs`);
+  await app.listen(env.PORT);
+  console.log(`Application is running on: http://localhost:${env.PORT}`);
+  console.log(`Swagger docs: http://localhost:${env.PORT}/api/docs`);
 }
 bootstrap();

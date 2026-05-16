@@ -1,4 +1,66 @@
-node_modules
-dist
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build outputs
+dist/
+frontend/dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Allow .env.example
+!.env.example
+
+# Database files (SQLite)
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/*.sqlite
+
+# Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS files
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+
+# Testing
+coverage/
+frontend/coverage/
+
+# Build artifacts
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Docker volumes (if any)
+.volumes/
+
+# API Keys / Secrets (catch-all)
+*.key
+*.pem
+*.p12
+*.pfx
+credentials.*
+secrets/

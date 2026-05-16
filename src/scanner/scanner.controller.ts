@@ -51,6 +51,7 @@ export class ScannerController {
   }
 
   @Get('scan/stream')
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'Stream scan progress via SSE',
     description:
