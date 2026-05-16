@@ -242,6 +242,17 @@ auditoria-web/
 - [docs/FRONTEND.md](docs/FRONTEND.md): Frontend React + Vite + Tailwind, componentes, testing
 - [docs/GUIA_USO.md](docs/GUIA_USO.md): Guía de uso e interpretación de resultados
 
+## CI/CD
+
+El proyecto incluye un pipeline de GitHub Actions en `.github/workflows/ci.yml` que se ejecuta en **push a `main`** y en **Pull Requests**:
+
+| Job | Pasos |
+|-----|-------|
+| **Backend** (NestJS) | `npm ci` → `npm run build` → `npm test` (250 tests) |
+| **Frontend** (React) | `npm ci` → `tsc -b --noEmit` → `npm run build` → `npm test` (44 tests) |
+
+Ambos jobs corren en **paralelo** con Ubuntu Latest + Node.js 22 y caching de `node_modules`.
+
 ## Testing
 
 ```bash
