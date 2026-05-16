@@ -5,6 +5,7 @@ import { AnalyzerModule } from './analyzer/analyzer.module';
 import { ComplianceModule } from './compliance/compliance.module';
 import { ReportModule } from './report/report.module';
 import { RequestLoggerMiddleware } from './common/middleware/request-logger.middleware';
+import { HistoryModule } from './history/history.module';
 import { SECURITY } from './common/config/security.config';
 
 @Module({
@@ -13,6 +14,7 @@ import { SECURITY } from './common/config/security.config';
       ttl: SECURITY.RATE_LIMIT_WINDOW_MS,
       limit: SECURITY.RATE_LIMIT_MAX,
     }]),
+    HistoryModule,
     ScannerModule,
     AnalyzerModule,
     ComplianceModule,

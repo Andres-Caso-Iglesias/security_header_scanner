@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { cn } from './lib/cn';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ScanProgress } from './components/ScanProgress';
@@ -6,6 +6,7 @@ import type { ScanStage, ScanStageStatus, StageInfo } from './components/ScanPro
 import { ScanForm } from './components/ScanForm';
 import { MetaSection } from './components/MetaSection';
 import { SslWarning } from './components/SslWarning';
+import { HistoryPanel } from './components/HistoryPanel';
 import { HeaderGrid } from './components/HeaderGrid';
 import { TlsSection } from './components/TlsSection';
 import { DnsSection } from './components/DnsSection';
@@ -64,6 +65,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('headers');
   const [scanStages, setScanStages] = useState<StageInfo[]>([]);
   const [scanMessage, setScanMessage] = useState<string | undefined>();
+  const [historyRefresh, setHistoryRefresh] = useState(0);
+
+  const handleHistorySelect = useCallback((result: ScanResult) => {
+    setResult(result);
+    setError(null);
+    setActiveTab('headers');
+  }, []);
 
   // Simulated progress stages with calibrated timing
   const PROGRESS_TIMING: { stage: ScanStage; delayMs: number; message: string }[] = [
@@ -140,6 +148,7 @@ export default function App() {
       setScanStages(allStages.map(s => ({ stage: s, status: 'complete' })));
       setScanMessage('Escaneo completado');
       setResult(data as ScanResult);
+      setHistoryRefresh(n => n + 1);
       setLoading(false);
     } catch (e) {
       setError(classifyError(e));
@@ -286,6 +295,9 @@ export default function App() {
             <ErrorBoundary title="Archivos de Seguridad">
               <SecurityFilesSection securityFiles={result.securityFiles} />
             </ErrorBoundary>
+
+            {/* History */}
+            <HistoryPanel onSelect={handleHistorySelect} refreshTrigger={historyRefresh} />
 
             {/* Footer */}
             <footer className="mt-12 py-5 border-t border-white/5 text-center text-xs text-slate-600">

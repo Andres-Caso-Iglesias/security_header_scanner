@@ -14,6 +14,7 @@ const analyzer_module_1 = require("./analyzer/analyzer.module");
 const compliance_module_1 = require("./compliance/compliance.module");
 const report_module_1 = require("./report/report.module");
 const request_logger_middleware_1 = require("./common/middleware/request-logger.middleware");
+const history_module_1 = require("./history/history.module");
 const security_config_1 = require("./common/config/security.config");
 let AppModule = class AppModule {
     configure(consumer) {
@@ -28,6 +29,7 @@ exports.AppModule = AppModule = __decorate([
                     ttl: security_config_1.SECURITY.RATE_LIMIT_WINDOW_MS,
                     limit: security_config_1.SECURITY.RATE_LIMIT_MAX,
                 }]),
+            history_module_1.HistoryModule,
             scanner_module_1.ScannerModule,
             analyzer_module_1.AnalyzerModule,
             compliance_module_1.ComplianceModule,

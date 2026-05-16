@@ -9,6 +9,7 @@ import { TechFingerprinterService } from './fingerprint/tech-fingerprinter.servi
 import { AnalyzerService } from '../analyzer/analyzer.service';
 import { ComplianceService } from '../compliance/compliance.service';
 import { ReportService } from '../report/report.service';
+import { HistoryService } from '../history/history.service';
 import type { ScanResult } from '../common/interfaces/scan-result.interface';
 import type { ScanProgressEvent } from './dto/scan-progress.dto';
 export declare class ScannerService {
@@ -22,7 +23,9 @@ export declare class ScannerService {
     private readonly analyzer;
     private readonly compliance;
     private readonly report;
-    constructor(httpClient: HttpClientService, tlsChecker: TlsCheckerService, dnsChecker: DnsCheckerService, securityFileChecker: SecurityFileCheckerService, sensitiveFileChecker: SensitiveFileCheckerService, sriChecker: SriCheckerService, techFingerprinter: TechFingerprinterService, analyzer: AnalyzerService, compliance: ComplianceService, report: ReportService);
+    private readonly history;
+    private readonly logger;
+    constructor(httpClient: HttpClientService, tlsChecker: TlsCheckerService, dnsChecker: DnsCheckerService, securityFileChecker: SecurityFileCheckerService, sensitiveFileChecker: SensitiveFileCheckerService, sriChecker: SriCheckerService, techFingerprinter: TechFingerprinterService, analyzer: AnalyzerService, compliance: ComplianceService, report: ReportService, history: HistoryService);
     scan(url: string): Promise<ScanResult>;
     scanStream(url: string): Observable<ScanProgressEvent | ScanResult>;
     private emit;

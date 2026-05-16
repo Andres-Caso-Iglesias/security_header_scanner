@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var ScannerService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScannerService = void 0;
 const common_1 = require("@nestjs/common");
@@ -22,7 +23,8 @@ const tech_fingerprinter_service_1 = require("./fingerprint/tech-fingerprinter.s
 const analyzer_service_1 = require("../analyzer/analyzer.service");
 const compliance_service_1 = require("../compliance/compliance.service");
 const report_service_1 = require("../report/report.service");
-let ScannerService = class ScannerService {
+const history_service_1 = require("../history/history.service");
+let ScannerService = ScannerService_1 = class ScannerService {
     httpClient;
     tlsChecker;
     dnsChecker;
@@ -33,7 +35,9 @@ let ScannerService = class ScannerService {
     analyzer;
     compliance;
     report;
-    constructor(httpClient, tlsChecker, dnsChecker, securityFileChecker, sensitiveFileChecker, sriChecker, techFingerprinter, analyzer, compliance, report) {
+    history;
+    logger = new common_1.Logger(ScannerService_1.name);
+    constructor(httpClient, tlsChecker, dnsChecker, securityFileChecker, sensitiveFileChecker, sriChecker, techFingerprinter, analyzer, compliance, report, history) {
         this.httpClient = httpClient;
         this.tlsChecker = tlsChecker;
         this.dnsChecker = dnsChecker;
@@ -44,6 +48,7 @@ let ScannerService = class ScannerService {
         this.analyzer = analyzer;
         this.compliance = compliance;
         this.report = report;
+        this.history = history;
     }
     async scan(url) {
         const parsedUrl = new URL(url);
@@ -68,7 +73,7 @@ let ScannerService = class ScannerService {
             this.techFingerprinter.fingerprint(httpResult.headers, url),
         ]);
         const complianceResult = this.compliance.evaluate(analysisResult.headers, tlsResult, dnsResult, securityFilesResult, fingerprintResult);
-        return this.report.generate({
+        const report = this.report.generate({
             url,
             headers: analysisResult,
             compliance: complianceResult,
@@ -84,6 +89,13 @@ let ScannerService = class ScannerService {
             sensitiveFiles: sensitiveFilesResult,
             fingerprint: fingerprintResult,
         });
+        try {
+            this.history.save(url, report.score, report.grade, report.timestamp, report);
+        }
+        catch (e) {
+            this.logger.warn(`Failed to save scan to history: ${e.message}`);
+        }
+        return report;
     }
     scanStream(url) {
         const subject = new rxjs_1.Subject();
@@ -173,7 +185,7 @@ let ScannerService = class ScannerService {
     }
 };
 exports.ScannerService = ScannerService;
-exports.ScannerService = ScannerService = __decorate([
+exports.ScannerService = ScannerService = ScannerService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [http_client_service_1.HttpClientService,
         tls_checker_service_1.TlsCheckerService,
@@ -184,6 +196,7 @@ exports.ScannerService = ScannerService = __decorate([
         tech_fingerprinter_service_1.TechFingerprinterService,
         analyzer_service_1.AnalyzerService,
         compliance_service_1.ComplianceService,
-        report_service_1.ReportService])
+        report_service_1.ReportService,
+        history_service_1.HistoryService])
 ], ScannerService);
 //# sourceMappingURL=scanner.service.js.map

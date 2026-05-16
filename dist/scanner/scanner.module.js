@@ -23,6 +23,7 @@ const export_service_1 = require("../report/export/export.service");
 const analyzer_module_1 = require("../analyzer/analyzer.module");
 const compliance_module_1 = require("../compliance/compliance.module");
 const report_module_1 = require("../report/report.module");
+const history_module_1 = require("../history/history.module");
 const timeout_config_1 = require("../common/constants/timeout.config");
 let ScannerModule = class ScannerModule {
 };
@@ -37,6 +38,7 @@ exports.ScannerModule = ScannerModule = __decorate([
             analyzer_module_1.AnalyzerModule,
             compliance_module_1.ComplianceModule,
             report_module_1.ReportModule,
+            history_module_1.HistoryModule,
         ],
         controllers: [scanner_controller_1.ScannerController],
         providers: [

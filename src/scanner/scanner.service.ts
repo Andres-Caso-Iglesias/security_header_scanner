@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Subject, Observable } from 'rxjs';
 import { HttpClientService } from './http-client/http-client.service';
 import { TlsCheckerService } from './tls/tls-checker.service';
@@ -10,11 +10,13 @@ import { TechFingerprinterService } from './fingerprint/tech-fingerprinter.servi
 import { AnalyzerService } from '../analyzer/analyzer.service';
 import { ComplianceService } from '../compliance/compliance.service';
 import { ReportService } from '../report/report.service';
+import { HistoryService } from '../history/history.service';
 import type { ScanResult } from '../common/interfaces/scan-result.interface';
 import type { ScanProgressEvent } from './dto/scan-progress.dto';
 
 @Injectable()
 export class ScannerService {
+  private readonly logger = new Logger(ScannerService.name);
   constructor(
     private readonly httpClient: HttpClientService,
     private readonly tlsChecker: TlsCheckerService,
@@ -26,6 +28,7 @@ export class ScannerService {
     private readonly analyzer: AnalyzerService,
     private readonly compliance: ComplianceService,
     private readonly report: ReportService,
+    private readonly history: HistoryService,
   ) {}
 
   async scan(url: string): Promise<ScanResult> {
@@ -61,7 +64,7 @@ export class ScannerService {
       fingerprintResult,
     );
 
-    return this.report.generate({
+    const report = this.report.generate({
       url,
       headers: analysisResult,
       compliance: complianceResult,
@@ -77,6 +80,15 @@ export class ScannerService {
       sensitiveFiles: sensitiveFilesResult,
       fingerprint: fingerprintResult,
     });
+
+    // Auto-save to history
+    try {
+      this.history.save(url, report.score, report.grade, report.timestamp, report);
+    } catch (e) {
+      this.logger.warn(`Failed to save scan to history: ${(e as Error).message}`);
+    }
+
+    return report;
   }
 
   /**

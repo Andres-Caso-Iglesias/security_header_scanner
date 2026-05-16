@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ScannerController } from './scanner.controller';
 import { ScannerService } from './scanner.service';
@@ -14,6 +14,7 @@ import { ExportService } from '../report/export/export.service';
 import { AnalyzerModule } from '../analyzer/analyzer.module';
 import { ComplianceModule } from '../compliance/compliance.module';
 import { ReportModule } from '../report/report.module';
+import { HistoryModule } from '../history/history.module';
 import { TIMEOUTS } from '../common/constants/timeout.config';
 
 @Module({
@@ -25,6 +26,7 @@ import { TIMEOUTS } from '../common/constants/timeout.config';
     AnalyzerModule,
     ComplianceModule,
     ReportModule,
+    HistoryModule,
   ],
   controllers: [ScannerController],
   providers: [
