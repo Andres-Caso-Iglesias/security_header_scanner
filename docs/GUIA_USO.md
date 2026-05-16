@@ -32,6 +32,7 @@ Guia practica para utilizar la herramienta de auditoria de seguridad web y enten
 6. Revise el reporte generado con las secciones de headers, TLS, DNS, archivos de seguridad, SRI, archivos sensibles, fingerprinting y recomendaciones
 7. Si el certificado SSL esta expirado o proximo a expirar, aparecera un aviso destacado en la parte superior del reporte
 8. Los textos largos (URLs de SRI, recomendaciones) se truncan con un click para expandir al contenido completo
+9. El panel de **Historial** (a la derecha) muestra los escaneos previos. Puede cargar un resultado anterior o eliminar entradas del historial
 
 ### Via API (curl)
 
@@ -47,6 +48,31 @@ curl -X POST http://localhost:3000/api/scan \
 2. Expanda el endpoint POST /api/scan
 3. Haga clic en "Try it out"
 4. Ingrese la URL y ejecute
+
+### Escaneo con progreso en tiempo real (SSE)
+
+La herramienta soporta un endpoint de streaming que envia eventos de progreso mientras se ejecuta el escaneo:
+
+```bash
+curl -N http://localhost:3000/api/scan/stream \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://ejemplo.com"}'
+```
+
+Cada etapa del escaneo emite un evento JSON con `stage`, `status` y `message`. Al finalizar, se envía el reporte completo.
+
+### Historial de Escaneos
+
+```bash
+# Listar historial
+curl http://localhost:3000/api/history
+
+# Obtener escaneo especifico
+curl http://localhost:3000/api/history/1
+
+# Eliminar escaneo
+curl -X DELETE http://localhost:3000/api/history/1
+```
 
 ### Exportar Reporte PDF
 
@@ -508,7 +534,7 @@ El analisis de compliance (OWASP Top 10, NIS2) se basa unicamente en los headers
 1. **Solo headers HTTP**: La herramienta no analiza contenido HTML, JavaScript, ni realiza escaneo activo
 2. **Sin autenticacion**: No soporta escaneo detras de login ni sesiones autenticadas
 3. **Sin analisis de contenido**: No detecta vulnerabilidades XSS o SQLi en el cuerpo de la respuesta
-4. **Sin almacenamiento**: No guarda historial de escaneos, cada analisis es independiente
+4. **Historial en SQLite**: Los escaneos se guardan automaticamente en una base de datos SQLite local (`data/scans.db`). Se puede consultar, cargar y eliminar escaneos previos via API o interfaz web. El historial es local al servidor — no hay sincronizacion entre instancias
 5. **Dependencia de red**: Los resultados dependen de la conectividad con el destino; firewalls, WAFs y CDNs pueden afectar los headers recibidos
 6. **CSP basico**: El analisis de CSP verifica directivas principales pero no evalua la politica completa
 7. **Scope academico**: La herramienta fue desarrollada como proyecto de master y **no debe usarse como unico instrumento de auditoria profesional**

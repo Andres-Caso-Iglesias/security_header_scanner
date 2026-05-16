@@ -48,8 +48,8 @@ frontend/
 │   ├── test/
 │   │   ├── setup.ts        # Config de testing (@testing-library/jest-dom)
 │   │   ├── mock-data.ts    # Datos mock para tests
-│   │   └── components/     # 26 tests, 5 archivos
-│   └── components/         # 14 componentes
+│   │   └── components/     # 44 tests, 8 archivos
+│   └── components/         # 15 componentes
 │       ├── ScoreCircle.tsx
 │       ├── ScanForm.tsx
 │       ├── MetaSection.tsx
@@ -64,13 +64,14 @@ frontend/
 │       ├── ComplianceGrid.tsx
 │       ├── SecurityFilesSection.tsx
 │       ├── ScanProgress.tsx
-│       └── ErrorBoundary.tsx
+│       ├── ErrorBoundary.tsx
+│       └── HistoryPanel.tsx
 └── dist/                   # Build de produccion
 ```
 
 ## Componentes
 
-La aplicacion se organiza en 13 componentes independientes bajo `src/components/`, mas el orquestador `App.tsx`.
+La aplicacion se organiza en 15 componentes independientes bajo `src/components/`, mas el orquestador `App.tsx`.
 
 ### ScoreCircle
 
@@ -101,9 +102,29 @@ Wrapper que captura errores de renderizado en componentes hijos. Cada tab del da
 - Los demas tabs continuan funcionando sin interrupcion
 - Implementado como clase de React (componentDidCatch)
 
-### SecurityFilesSection
+### HistoryPanel
 
-Dos tarjetas (security.txt y robots.txt) con estado encontrado/ausente, contenido y recomendaciones.
+Panel lateral que muestra el historial de escaneos previos almacenados en el backend (SQLite):
+
+- Lista de escaneos con URL, score, grado y timestamp
+- Boton "Cargar" que restaura los resultados del escaneo seleccionado
+- Boton "Eliminar" que borra el escaneo del historial
+- Integrado via `GET /api/history`, `GET /api/history/:id`, `DELETE /api/history/:id`
+
+### Estados de Error
+
+La aplicacion maneja un tipo `ScanError` con 4 categorias:
+
+| Tipo | Significado | Accion |
+|------|-------------|--------|
+| `network` | Error de conexion al backend | Reintentar |
+| `timeout` | El escaneo excedio el tiempo limite | Reintentar con URL mas rapida |
+| `server` | Error interno del servidor (502, 5xx) | Reintentar mas tarde |
+| `validation` | URL invalida o mal formada | Corregir la URL |
+
+Cada tab del dashboard esta envuelto en su propio `ErrorBoundary` (clase React con `componentDidCatch`) que muestra un mensaje especifico y boton "Reintentar" sin afectar los demas tabs.
+
+### SecurityFilesSection
 
 ## Layout de Resultados
 

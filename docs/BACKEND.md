@@ -31,33 +31,38 @@ Documentacion tecnica detallada del backend NestJS.
 El backend sigue la arquitectura modular de NestJS con 4 modulos funcionales independientes. Cada modulo encapsula una responsabilidad del dominio y se comunica con los demas a traves de la inyeccion de dependencias de NestJS.
 
 ```
-HTTP Request (POST /api/scan)
-       |
-       v
-  ScannerController  -->  ValidationPipe (DTO)
-       |
-       v
-  ScannerService (orquestador)
-       |
-       +---> HttpClientService (fetch HTTP)
-       |          |
-       |          v
-       +---> TlsCheckerService (TLS/SSL en paralelo)
-       |          |
-       |          v
-       +---> AnalyzerService (15 checkers)
-       |          |
-       |          +---> ScoreCalculator
-       |
-       +---> ComplianceService
-       |          |
-       |          +---> Owaspmapper
-       |          +---> Nis2Mapper
-       |
-       +---> ReportService (genera JSON)
-       |
-       v
-  JSON Response
+HTTP Request (POST /api/scan)        HTTP Request (GET /api/scan/stream)
+       |                                          |
+       v                                          v
+  ScannerController  -->  ValidationPipe     ScannerController (SSE)
+       |                                          |
+       v                                          v
+  ScannerService.scan(url)                ScannerService.scanStream(url)
+       |                                          |
+       +---> scanCore(url)                 scanCore(url, onProgress)
+       |                                          |
+       |                                    + eventos SSE por etapa
+       |                                    |
+       +---> HttpClientService            HttpClientService
+       +---> TlsCheckerService            TlsCheckerService
+       +---> DnsCheckerService            DnsCheckerService
+       +---> SecurityFileChecker          SecurityFileChecker
+       +---> SensitiveFileChecker         SensitiveFileChecker
+       +---> SriChecker                   SriChecker
+       +---> TechFingerprinter            TechFingerprinter
+       +---> CveApiService (OSV.dev)      CveApiService (OSV.dev)
+       |                                          |
+       v                                          v
+  AnalyzerService  ─── ScoreCalculator     AnalyzerService  ─── ScoreCalculator
+       |                                          |
+       v                                          v
+  ComplianceService                          ComplianceService
+  (OWASP, NIS2, ENS, ISO 27001)             (OWASP, NIS2, ENS, ISO 27001)
+       |                                          |
+       v                                          v
+  ReportService (JSON)                      HistoryService (SQLite auto-save)
+
+  JSON Response                              SSE stream: eventos + reporte final
 ```
 
 ### Flujo de datos
@@ -92,10 +97,13 @@ interface HeaderChecker {
 Esta interfaz es el contrato que todos los checkers implementan. El metodo `analyze` recibe el valor del header (o `undefined` si no existe) y devuelve un `HeaderResult` con la calificacion, hallazgo y recomendacion.
 
 **Archivos del common:**
+- `config/cors.config.ts` - Configuracion CORS (restringido a `http://localhost:5173` por defecto, configurable via `CORS_ORIGIN`)
+- `config/security.config.ts` - Configuracion de seguridad (API Key, etc.)
 - `interfaces/header-checker.interface.ts` - Interface HeaderChecker + tipo HeaderResult
 - `interfaces/scan-result.interface.ts` - Tipos ScanResult, ComplianceSection, ComplianceFinding, ScanMetadata
 - `enums/severity.enum.ts` - Constantes SEVERITY y SEVERITY_WEIGHTS (pattern `as const`)
 - `constants/header-weights.ts` - Configuracion de los 15 headers con nombre, severidad, peso, valor esperado
+- `constants/timeout.config.ts` - Timeouts configurables para 8 subsistemas
 - `filters/http-exception.filter.ts` - Filtro global de excepciones HTTP
 - `pipes/url-validation.pipe.ts` - Pipe de validacion de URL
 
@@ -136,16 +144,34 @@ Configuracion: timeout 10s, max 5 redirects, `validateStatus: () => true` (acept
 
 **`src/scanner/scanner.service.ts`**
 
-Orquestador del flujo completo:
-```typescript
-async scan(url: string): Promise<ScanResult> {
-  const httpResult = await this.httpClient.fetch(url);
-  const analysisResult = this.analyzer.analyze(httpResult.headers);
-  const complianceResult = this.compliance.evaluate(analysisResult.headers);
-  const report = this.report.generate({ ... });
-  return report;
-}
+Orquestador del flujo completo. Implementa el patrón **Template Method** para eliminar duplicación entre scan normal y streaming:
+
 ```
+scan() ──────────────────┐
+                          ├──→ scanCore() ──→ checks → report
+scanStream(url) ──┐      │
+                  ├──→ scanCore(url, emit) ──→ checks + events → report
+                  │
+           (Subject → Observable)
+```
+
+- `scanCore(url, onProgress?)`: método privado con TODA la lógica central. Recibe un callback opcional `onProgress` que emite eventos de progreso por etapa. Si no se provee, los emits son no-ops.
+- `scan(url)`: llama a `scanCore()` sin callback y persiste el reporte en historial SQLite
+- `scanStream(url)`: llama a `scanCore()` con un callback que emite eventos a un `Subject`, retornando un `Observable` para SSE
+
+**Etapas de progreso emitidas por `scanStream()`:**
+
+| Etapa | Descripción |
+|-------|-------------|
+| `http` | Solicitud HTTP inicial (headers de respuesta) |
+| `tls` | Verificación de conexión TLS/SSL |
+| `dns` | Consulta de registros DNS (SPF, DKIM, DMARC) |
+| `security-files` | Archivos de seguridad (robots.txt, security.txt) |
+| `sensitive-files` | Escaneo de rutas sensibles (40 rutas) |
+| `sri` | Análisis de integridad de recursos (SRI) |
+| `fingerprint` | Identificación de tecnologías + consulta OSV.dev |
+| `analysis` | Cálculo de score y compliance |
+| `complete` | Escaneo finalizado, reporte listo |
 
 ### TechFingerprinterService
 
@@ -205,6 +231,27 @@ Servicio que consulta la API pública de OSV.dev (Google Open Source Vulnerabili
 ```
 
 **Caracteristicas:**
+### HistoryService
+
+**Ubicacion:** `src/history/history.service.ts`
+
+Servicio que persiste los resultados de escaneos en una base de datos SQLite via `better-sqlite3`.
+
+**Tabla:** `scans` con los campos `id`, `url`, `score`, `grade`, `timestamp`, `data` (JSON blob del reporte completo).
+
+**Endpoints expuestos via `HistoryController`:**
+
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| `GET` | `/api/history` | Lista todos los escaneos (sin datos completos) |
+| `GET` | `/api/history/:id` | Obtiene un escaneo completo por ID |
+| `POST` | `/api/history` | Guarda un escaneo manualmente |
+| `DELETE` | `/api/history/:id` | Elimina un escaneo |
+
+**Auto-save:** Cada escaneo exitoso via `POST /api/scan` se persiste automaticamente en `ScannerService.scan()`. Los escaneos via `scanStream()` (SSE) NO se guardan automaticamente.
+
+**Ubicacion de la base de datos:** `data/scans.db` (relativa a la raiz del proyecto).
+
 - Cache en memoria con TTL de 30 minutos para evitar rate limiting
 - Fallback silencioso: si la API no responde, continua solo con la base local
 - Mapeo de nombres de tecnologia a nombres OSV (ej: "Nginx" → "nginx", "WordPress" → "wordpress")
@@ -241,6 +288,24 @@ curl -X POST http://localhost:3000/api/scan \
 | Ventana | 60000ms (1 min) | `RATE_LIMIT_WINDOW_MS` |
 
 Aplica a los endpoints `POST /api/scan` y `POST /api/export`. Las requests que exceden el limite reciben `429 Too Many Requests`.
+
+### CORS
+
+**Ubicacion:** `src/common/config/cors.config.ts`
+
+La configuracion CORS se centraliza en un unico archivo y se aplica en `main.ts` al crear la aplicacion:
+
+```typescript
+const app = await NestFactory.create(AppModule, { cors: CORS_CONFIG });
+```
+
+| Parametro | Default | Variable de entorno |
+|-----------|---------|-------------------|
+| Origen permitido | `http://localhost:5173` | `CORS_ORIGIN` |
+| Metodos | GET, POST, DELETE | — |
+| Credentials | true | — |
+
+Por defecto solo permite conexiones desde el frontend de desarrollo (Vite en puerto 5173). Para entornos de produccion con otros origenes, configurar `CORS_ORIGIN` con la URL del frontend o `*` para abrir a todos (no recomendado).
 
 ### Request Logging
 
@@ -320,13 +385,26 @@ Captura todas las excepciones no manejadas y retorna un JSON consistente:
 
 ## Testing
 
-### Tests Unitarios (83 tests)
+### Tests Unitarios (250 tests, 31 suites)
 
 Los tests unitarios cubren:
 - Cada checker individualmente (15 archivos de test)
 - Score calculator con combinaciones de headers
-- Mappers de compliance (OWASP y NIS2)
+- Mappers de compliance (OWASP, NIS2)
 - ScannerService con dependencias mockeadas
+- ScannerService.scanStream con Subject mocking
+- HttpClientService (timeouts, DNS errors, SSL errors)
+- TlsCheckerService (TLS v1.2, v1.3, expired certs, self-signed)
+- DnsCheckerService (SPF, DKIM, DMARC, timeouts, no records)
+- TechFingerprinterService (23 firmas de deteccion)
+- CveApiService (OSV.dev cache, fallback, error handling)
+- ExportService (PDF generation, JSON export)
+- HistoryService (save, findAll, findOne, delete)
+- SensitiveFileCheckerService (40 rutas, soft 404 detection)
+- SecurityFileCheckerService (robots.txt, security.txt)
+- SriCheckerService (integrity attribute parsing)
+- ApiKeyGuard (valid key, missing key, disabled auth)
+- AllExceptionsFilter (HTTP exception, unknown exception)
 
 Patron de test para checkers:
 ```typescript

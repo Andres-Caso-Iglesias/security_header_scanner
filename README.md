@@ -69,10 +69,12 @@ La herramienta recibe una URL vía API REST, realiza una petición HTTP a la mis
 | Validación | class-validator + class-transformer |
 | Rate Limiting | @nestjs/throttler (20 req/min por IP) |
 | Autenticación | API Key via header `X-API-Key` |
+| CORS | Restringido a `http://localhost:5173` (configurable via `CORS_ORIGIN`) |
 | Logging | Middleware HTTP con duración y origen |
 | Documentación API | Swagger / OpenAPI (via @nestjs/swagger) |
-| Testing | Jest + supertest |
+| Testing | Jest + supertest (250 tests, 31 suites) |
 | Export PDF | PDFKit |
+| Historial | SQLite via better-sqlite3 (CRUD endpoints) |
 
 ### Frontend
 
@@ -82,7 +84,7 @@ La herramienta recibe una URL vía API REST, realiza una petición HTTP a la mis
 | Bundler | Vite 8 |
 | Estilos | Tailwind CSS 4 |
 | Gráficos | Chart.js 4 |
-| Testing | Vitest + React Testing Library (26 tests) |
+| Testing | Vitest + React Testing Library (44 tests, 8 archivos) |
 | Lenguaje | TypeScript 6 |
 
 ### DevOps
@@ -196,6 +198,7 @@ curl -X POST http://localhost:3000/api/scan \
 |-----------|-------------|---------------|
 | **API Key** | Header `X-API-Key` requerido en todos los endpoints | `API_KEY` env var. Vacío = deshabilitado |
 | **Rate Limiting** | Máximo 20 requests por minuto por IP | `RATE_LIMIT_MAX` y `RATE_LIMIT_WINDOW_MS` env vars |
+| **CORS** | Restringido a `http://localhost:5173` por defecto | `CORS_ORIGIN` env var. `*` para abrir a todos |
 | **Logging** | Cada request se registra con método, ruta, status, duración e IP | Automático. Sin configuración |
 
 ## Estructura del Proyecto
@@ -214,17 +217,19 @@ auditoria-web/
 │   │   ├── filters/              # Global exception filter
 │   │   └── pipes/                # URL validation
 │   ├── scanner/                  # Controller, DTOs, HTTP client, TLS, DNS, files, SRI, fingerprint
-│   │   └── fingerprint/          # Tech detection (23 firmas) + CveApiService (OSV.dev)
+│   │   ├── fingerprint/          # Tech detection (23 firmas) + CveApiService (OSV.dev)
+│   │   └── dto/                  # ScanProgressEvent (SSE streaming)
+│   ├── history/                  # SQLite CRUD via better-sqlite3
 │   ├── analyzer/                 # Score calculator + 15 header checkers
 │   ├── compliance/               # Mappers OWASP, NIS2, ENS, ISO 27001
 │   └── report/                   # Export PDF/JSON
-├── test/                         # Tests unitarios (83) y e2e
+├── test/                         # Tests unitarios (250, 31 suites) y e2e
 ├── frontend/                     # React 19 + Vite 8 + Tailwind 4
 │   └── src/
-│       ├── components/           # 14 componentes (ScoreCircle, HeaderGrid, ScanProgress, ErrorBoundary...)
+│       ├── components/           # 15 componentes (ScoreCircle, HeaderGrid, ScanProgress, ErrorBoundary, HistoryPanel...)
 │       ├── lib/cn.ts             # Utilidad Tailwind
 │       ├── types.ts              # Interfaces TypeScript
-│       └── test/                 # 26 tests con Vitest + RTL
+│       └── test/                 # 44 tests (8 archivos) con Vitest + RTL
 ├── Dockerfile                    # Backend multi-stage
 ├── docker-compose.yml            # Backend + Frontend + network
 ├── start.sh                      # Script desarrollo local
@@ -240,12 +245,11 @@ auditoria-web/
 ## Testing
 
 ```bash
-# Backend (83 tests)
+# Backend (250 tests, 31 suites)
 npm test
-npm run test:e2e
 npm run test:cov
 
-# Frontend (26 tests)
+# Frontend (44 tests, 8 archivos)
 cd frontend
 npm test
 ```
