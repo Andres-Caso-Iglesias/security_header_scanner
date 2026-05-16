@@ -11,15 +11,13 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
-# Workaround: create missing rxjs type declarations
-# rxjs 7.8.1 is published without dist/types/index.d.ts
-RUN mkdir -p node_modules/rxjs/dist/types && \
-    echo 'export class Observable<T> { constructor(subscribe?: (subscriber: any) => void); pipe<R>(...operations: ((source: Observable<any>) => Observable<any>)[]): Observable<R>; subscribe(observer?: any): any; }' > node_modules/rxjs/dist/types/index.d.ts && \
-    echo 'export class Subject<T> extends Observable<T> { next(value: T): void; error(err: any): void; complete(): void; asObservable(): Observable<T>; }' >> node_modules/rxjs/dist/types/index.d.ts && \
-    echo 'export function firstValueFrom<T>(source: Observable<T>): Promise<T>;' >> node_modules/rxjs/dist/types/index.d.ts && \
-    echo 'export function from<T>(input: any): Observable<T>;' >> node_modules/rxjs/dist/types/index.d.ts && \
-    echo 'export function of<T>(...values: T[]): Observable<T>;' >> node_modules/rxjs/dist/types/index.d.ts && \
-    echo 'export function map<T, R>(project: (value: T, index: number) => R): (source: Observable<T>) => Observable<R>;' >> node_modules/rxjs/dist/types/index.d.ts
+# rxjs 7.8.1 npm package ships without .d.ts files in dist/types.
+# Download and extract the real type declarations from the official package.
+RUN npm pack rxjs@7.8.1 --pack-destination /tmp && \
+    mkdir -p /tmp/rxjs-types && \
+    tar -xzf /tmp/rxjs-7.8.1.tgz -C /tmp/rxjs-types && \
+    cp -r /tmp/rxjs-types/package/dist/types/* node_modules/rxjs/dist/types/ && \
+    rm -rf /tmp/rxjs-7.8.1.tgz /tmp/rxjs-types
 
 # Copy source
 COPY tsconfig*.json ./
