@@ -1,8 +1,6 @@
 import { HistoryService } from '../../../src/history/history.service';
 
-jest.mock('better-sqlite3', () => ({
-  default: jest.fn(),
-}));
+jest.mock('better-sqlite3', () => jest.fn());
 
 function createStatement() {
   return {
@@ -28,8 +26,8 @@ describe('HistoryService', () => {
       prepare: prepareMock,
     };
 
-    const betterSqlite3 = require('better-sqlite3');
-    betterSqlite3.default.mockReturnValue(mockDb);
+    const mockConstructor = require('better-sqlite3') as jest.Mock;
+    mockConstructor.mockReturnValue(mockDb);
 
     service = new HistoryService();
     service.onModuleInit();

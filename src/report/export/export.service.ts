@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { ScanResult } from '../../common/interfaces/scan-result.interface';
-import * as PDFDocument from 'pdfkit';
+import PDFDocument = require('pdfkit');
 
 @Injectable()
 export class ExportService {
