@@ -28,6 +28,5 @@ export declare class ScannerService {
     constructor(httpClient: HttpClientService, tlsChecker: TlsCheckerService, dnsChecker: DnsCheckerService, securityFileChecker: SecurityFileCheckerService, sensitiveFileChecker: SensitiveFileCheckerService, sriChecker: SriCheckerService, techFingerprinter: TechFingerprinterService, analyzer: AnalyzerService, compliance: ComplianceService, report: ReportService, history: HistoryService);
     scan(url: string): Promise<ScanResult>;
     scanStream(url: string): Observable<ScanProgressEvent | ScanResult>;
-    private emit;
-    private runScanWithProgress;
+    private scanCore;
 }
