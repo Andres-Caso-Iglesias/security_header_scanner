@@ -1,4 +1,5 @@
 import { PipeTransform, Injectable, BadRequestException } from '@nestjs/common';
+import { isPrivateIp, isBlockedHostname } from '../guards/ssrf.guard';
 
 @Injectable()
 export class UrlValidationPipe implements PipeTransform<string> {
@@ -25,11 +26,15 @@ export class UrlValidationPipe implements PipeTransform<string> {
         throw new BadRequestException('URL must have a valid hostname');
       }
 
-      if (
-        url.hostname !== 'localhost' &&
-        url.hostname !== '127.0.0.1' &&
-        !url.hostname.includes('.')
-      ) {
+      if (isBlockedHostname(url.hostname)) {
+        throw new BadRequestException(`Access to ${url.hostname} is not allowed`);
+      }
+
+      if (isPrivateIp(url.hostname)) {
+        throw new BadRequestException(`Access to private IP address ${url.hostname} is not allowed`);
+      }
+
+      if (!url.hostname.includes('.')) {
         throw new BadRequestException('URL must be a fully qualified domain name');
       }
     } catch (error) {

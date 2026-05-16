@@ -3,6 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import type { SecurityFileInfo, SecurityFileCheck } from '../../common/interfaces/security-file-info.interface';
 import { TIMEOUTS } from '../../common/constants/timeout.config';
+import { resolveAndCheckHostname } from '../../common/guards/ssrf.guard';
 
 @Injectable()
 export class SecurityFileCheckerService {
@@ -11,6 +12,35 @@ export class SecurityFileCheckerService {
   constructor(private readonly httpService: HttpService) {}
 
   async check(baseUrl: string): Promise<SecurityFileInfo> {
+    try {
+      const parsedUrl = new URL(baseUrl);
+      await resolveAndCheckHostname(parsedUrl.hostname);
+    } catch (error) {
+      this.logger.warn(`SSRF check failed for ${baseUrl}: ${(error as Error).message}`);
+      return {
+        checked: true,
+        securityTxt: {
+          path: '/.well-known/security.txt',
+          present: false,
+          statusCode: null,
+          content: null,
+          grade: 0,
+          finding: `SSRF protection blocked: ${(error as Error).message}`,
+          recommendation: 'Use a publicly accessible URL',
+        },
+        robotsTxt: {
+          path: '/robots.txt',
+          present: false,
+          statusCode: null,
+          content: null,
+          grade: 0,
+          finding: 'Skipped due to SSRF protection',
+          recommendation: 'Use a publicly accessible URL',
+        },
+        grade: 0,
+      };
+    }
+
     const base = baseUrl.replace(/\/+$/, '');
     const [securityTxt, robotsTxt] = await Promise.all([
       this.checkSingle(`${base}/.well-known/security.txt`),

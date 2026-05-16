@@ -8,20 +8,36 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var HttpClientService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HttpClientService = void 0;
 const common_1 = require("@nestjs/common");
 const axios_1 = require("@nestjs/axios");
 const rxjs_1 = require("rxjs");
 const axios_2 = require("axios");
-let HttpClientService = class HttpClientService {
+const ssrf_guard_1 = require("../../common/guards/ssrf.guard");
+let HttpClientService = HttpClientService_1 = class HttpClientService {
     httpService;
+    logger = new common_1.Logger(HttpClientService_1.name);
     userAgent = 'AuditoriaWeb-Scanner/1.0 (Security Headers Analyzer)';
     constructor(httpService) {
         this.httpService = httpService;
     }
     async fetch(url) {
         const startTime = Date.now();
+        try {
+            const parsedUrl = new URL(url);
+            await (0, ssrf_guard_1.resolveAndCheckHostname)(parsedUrl.hostname);
+        }
+        catch (error) {
+            if (error instanceof common_1.HttpException)
+                throw error;
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.FORBIDDEN,
+                message: error.message,
+                error: 'SSRF Protection',
+            }, common_1.HttpStatus.FORBIDDEN);
+        }
         try {
             const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(url, {
                 headers: {
@@ -89,7 +105,7 @@ let HttpClientService = class HttpClientService {
     }
 };
 exports.HttpClientService = HttpClientService;
-exports.HttpClientService = HttpClientService = __decorate([
+exports.HttpClientService = HttpClientService = HttpClientService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [axios_1.HttpService])
 ], HttpClientService);

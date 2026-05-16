@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import type { DetectedTech, CveInfo, TechFingerprintInfo } from '../../common/interfaces/fingerprint-info.interface';
 import { CveApiService } from './cve-api.service';
 import { TIMEOUTS } from '../../common/constants/timeout.config';
+import { resolveAndCheckHostname } from '../../common/guards/ssrf.guard';
 
 interface TechSignature {
   name: string;
@@ -39,6 +40,13 @@ export class TechFingerprinterService {
 
     let html = '';
     let bodyStart = '';
+
+    try {
+      const parsedUrl = new URL(url);
+      await resolveAndCheckHostname(parsedUrl.hostname);
+    } catch {
+      // SSRF check failed, continue with headers-only fingerprinting
+    }
 
     try {
       const response = await firstValueFrom(

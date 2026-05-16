@@ -44,12 +44,28 @@ exports.TlsCheckerService = void 0;
 const common_1 = require("@nestjs/common");
 const tls = __importStar(require("tls"));
 const timeout_config_1 = require("../../common/constants/timeout.config");
+const ssrf_guard_1 = require("../../common/guards/ssrf.guard");
 let TlsCheckerService = TlsCheckerService_1 = class TlsCheckerService {
     logger = new common_1.Logger(TlsCheckerService_1.name);
     timeoutMs = timeout_config_1.TIMEOUTS.TLS;
     defaultPort = 443;
     async check(hostname, port) {
         const targetPort = port ?? this.defaultPort;
+        try {
+            await (0, ssrf_guard_1.resolveAndCheckHostname)(hostname);
+        }
+        catch (error) {
+            this.logger.warn(`SSRF check failed for ${hostname}:${targetPort} — ${error.message}`);
+            return {
+                checked: true,
+                hostname,
+                port: targetPort,
+                error: error.message,
+                tlsVersion: null,
+                certificate: null,
+                grade: 0,
+            };
+        }
         try {
             return await this.performTlsCheck(hostname, targetPort);
         }

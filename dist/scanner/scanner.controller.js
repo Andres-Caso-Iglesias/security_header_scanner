@@ -23,6 +23,7 @@ const scan_request_dto_1 = require("./dto/scan-request.dto");
 const export_request_dto_1 = require("./dto/export-request.dto");
 const scan_response_dto_1 = require("./dto/scan-response.dto");
 const api_key_guard_1 = require("../common/guards/api-key.guard");
+const url_validation_pipe_1 = require("../common/pipes/url-validation.pipe");
 let ScannerController = class ScannerController {
     scannerService;
     exportService;
@@ -94,7 +95,7 @@ __decorate([
     }),
     (0, swagger_1.ApiQuery)({ name: 'url', required: true, type: String, description: 'Target URL to scan (must include protocol)' }),
     (0, common_1.Sse)(),
-    __param(0, (0, common_1.Query)('url')),
+    __param(0, (0, common_1.Query)('url', url_validation_pipe_1.UrlValidationPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)

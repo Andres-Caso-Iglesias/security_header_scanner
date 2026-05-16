@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, ValidationPipe, HttpCode, HttpStatus, Res, Query, Sse, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, ValidationPipe, HttpCode, HttpStatus, Res, Query, Sse, UseGuards, BadRequestException } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiQuery, ApiSecurity } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
@@ -9,6 +9,7 @@ import { ScanRequestDto } from './dto/scan-request.dto';
 import { ExportRequestDto } from './dto/export-request.dto';
 import { ScanResponseDto } from './dto/scan-response.dto';
 import { ApiKeyGuard } from '../common/guards/api-key.guard';
+import { UrlValidationPipe } from '../common/pipes/url-validation.pipe';
 
 @ApiTags('Scanner')
 @ApiSecurity('X-API-Key')
@@ -57,7 +58,7 @@ export class ScannerController {
   })
   @ApiQuery({ name: 'url', required: true, type: String, description: 'Target URL to scan (must include protocol)' })
   @Sse()
-  scanStream(@Query('url') url: string) {
+  scanStream(@Query('url', UrlValidationPipe) url: string) {
     const stream = this.scannerService.scanStream(url);
     return stream.pipe(
       map((data: unknown) => ({

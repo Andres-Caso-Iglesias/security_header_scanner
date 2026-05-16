@@ -3,6 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import type { SriInfo, SriResource } from '../../common/interfaces/content-info.interface';
 import { TIMEOUTS } from '../../common/constants/timeout.config';
+import { resolveAndCheckHostname } from '../../common/guards/ssrf.guard';
 
 @Injectable()
 export class SriCheckerService {
@@ -11,6 +12,22 @@ export class SriCheckerService {
   constructor(private readonly httpService: HttpService) {}
 
   async check(url: string): Promise<SriInfo> {
+    try {
+      const parsedUrl = new URL(url);
+      await resolveAndCheckHostname(parsedUrl.hostname);
+    } catch (error) {
+      this.logger.warn(`SSRF check failed for ${url}: ${(error as Error).message}`);
+      return {
+        checked: true,
+        totalResources: 0,
+        secureResources: 0,
+        insecureResources: [],
+        grade: 0,
+        finding: `SSRF protection blocked: ${(error as Error).message}`,
+        recommendation: 'Use a publicly accessible URL',
+      };
+    }
+
     try {
       const response = await firstValueFrom(
         this.httpService.get(url, {

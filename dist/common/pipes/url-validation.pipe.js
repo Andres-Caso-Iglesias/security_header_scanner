@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UrlValidationPipe = void 0;
 const common_1 = require("@nestjs/common");
+const ssrf_guard_1 = require("../guards/ssrf.guard");
 let UrlValidationPipe = class UrlValidationPipe {
     allowedProtocols = ['http:', 'https:'];
     maxUrlLength = 2048;
@@ -26,9 +27,13 @@ let UrlValidationPipe = class UrlValidationPipe {
             if (!url.hostname) {
                 throw new common_1.BadRequestException('URL must have a valid hostname');
             }
-            if (url.hostname !== 'localhost' &&
-                url.hostname !== '127.0.0.1' &&
-                !url.hostname.includes('.')) {
+            if ((0, ssrf_guard_1.isBlockedHostname)(url.hostname)) {
+                throw new common_1.BadRequestException(`Access to ${url.hostname} is not allowed`);
+            }
+            if ((0, ssrf_guard_1.isPrivateIp)(url.hostname)) {
+                throw new common_1.BadRequestException(`Access to private IP address ${url.hostname} is not allowed`);
+            }
+            if (!url.hostname.includes('.')) {
                 throw new common_1.BadRequestException('URL must be a fully qualified domain name');
             }
         }

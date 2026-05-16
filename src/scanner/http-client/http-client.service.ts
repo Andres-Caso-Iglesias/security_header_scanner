@@ -1,7 +1,8 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { AxiosError } from 'axios';
+import { resolveAndCheckHostname } from '../../common/guards/ssrf.guard';
 
 export interface HttpClientResult {
   headers: Record<string, string>;
@@ -11,12 +12,28 @@ export interface HttpClientResult {
 
 @Injectable()
 export class HttpClientService {
+  private readonly logger = new Logger(HttpClientService.name);
   private readonly userAgent = 'AuditoriaWeb-Scanner/1.0 (Security Headers Analyzer)';
 
   constructor(private readonly httpService: HttpService) {}
 
   async fetch(url: string): Promise<HttpClientResult> {
     const startTime = Date.now();
+
+    try {
+      const parsedUrl = new URL(url);
+      await resolveAndCheckHostname(parsedUrl.hostname);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.FORBIDDEN,
+          message: (error as Error).message,
+          error: 'SSRF Protection',
+        },
+        HttpStatus.FORBIDDEN,
+      );
+    }
 
     try {
       const response = await firstValueFrom(

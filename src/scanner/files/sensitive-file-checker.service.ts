@@ -3,6 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import type { SensitiveFilesInfo, SensitiveFileResult } from '../../common/interfaces/content-info.interface';
 import { TIMEOUTS } from '../../common/constants/timeout.config';
+import { resolveAndCheckHostname } from '../../common/guards/ssrf.guard';
 
 @Injectable()
 export class SensitiveFileCheckerService {
@@ -54,6 +55,19 @@ export class SensitiveFileCheckerService {
   constructor(private readonly httpService: HttpService) {}
 
   async check(baseUrl: string): Promise<SensitiveFilesInfo> {
+    try {
+      const parsedUrl = new URL(baseUrl);
+      await resolveAndCheckHostname(parsedUrl.hostname);
+    } catch (error) {
+      this.logger.warn(`SSRF check failed for ${baseUrl}: ${(error as Error).message}`);
+      return {
+        checked: true,
+        files: [],
+        exposedCount: 0,
+        grade: 0,
+      };
+    }
+
     const base = baseUrl.replace(/\/+$/, '');
     const results: SensitiveFileResult[] = [];
     const concurrency = 5;
