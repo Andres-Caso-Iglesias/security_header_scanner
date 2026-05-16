@@ -20,6 +20,8 @@ Documentacion tecnica detallada del backend NestJS.
 - [Seguridad](#seguridad)
   - [API Key](#api-key)
   - [Rate Limiting](#rate-limiting)
+  - [CORS](#cors)
+  - [SSRF Protection](#ssrf-protection)
   - [Request Logging](#request-logging)
   - [Timeouts Configurables](#timeouts-configurables)
 - [Manejo de Errores](#manejo-de-errores)
@@ -105,7 +107,8 @@ Esta interfaz es el contrato que todos los checkers implementan. El metodo `anal
 - `constants/header-weights.ts` - Configuracion de los 15 headers con nombre, severidad, peso, valor esperado
 - `constants/timeout.config.ts` - Timeouts configurables para 8 subsistemas
 - `filters/http-exception.filter.ts` - Filtro global de excepciones HTTP
-- `pipes/url-validation.pipe.ts` - Pipe de validacion de URL
+- `pipes/url-validation.pipe.ts` - Pipe de validacion de URL con proteccion SSRF
+- `guards/ssrf.guard.ts` - Utilidades de proteccion SSRF (isPrivateIp, isBlockedHostname, resolveAndCheckHostname)
 
 ### Scanner Module
 
@@ -307,6 +310,63 @@ const app = await NestFactory.create(AppModule, { cors: CORS_CONFIG });
 
 Por defecto solo permite conexiones desde el frontend de desarrollo (Vite en puerto 5173). Para entornos de produccion con otros origenes, configurar `CORS_ORIGIN` con la URL del frontend o `*` para abrir a todos (no recomendado).
 
+### SSRF Protection
+
+**Ubicacion:** `src/common/guards/ssrf.guard.ts` y `src/common/pipes/url-validation.pipe.ts`
+
+La proteccion contra **Server-Side Request Forgery (SSRF)** se implementa en dos capas de defensa en profundidad:
+
+#### Capa 1: Validacion estatica (UrlValidationPipe)
+
+Se ejecuta en el punto de entrada de la API (controller) y rechaza URLs que apunten a:
+
+| Categoria | Ejemplos bloqueados |
+|-----------|---------------------|
+| IPv4 privadas | `10.0.0.1`, `172.16.0.1`, `192.168.1.1` |
+| Loopback | `127.0.0.1`, `127.0.0.255` |
+| Link-local (cloud metadata) | `169.254.169.254` (AWS/GCP/Azure metadata) |
+| IPv6 loopback | `::1`, `[::1]`, `::` |
+| Hostnames reservados | `localhost`, `localhost.localdomain`, `0.0.0.0` |
+
+#### Capa 2: Resolucion DNS dinamica (antes de cada request)
+
+Antes de que cualquier servicio realice una peticion HTTP o conexion TLS, se resuelve el hostname y se verifica que **ninguna** de las IPs devueltas sea privada. Esto protege contra **DNS rebinding attacks**, donde un dominio apunta primero a una IP publica y luego cambia a una privada.
+
+**Servicios protegidos:**
+- `HttpClientService` — peticion HTTP principal
+- `TlsCheckerService` — conexion TLS/SSL
+- `SecurityFileCheckerService` — robots.txt, security.txt
+- `SensitiveFileCheckerService` — escaneo de 40 rutas sensibles
+- `SriCheckerService` — analisis de integridad de recursos
+- `TechFingerprinterService` — deteccion de tecnologias (best-effort)
+
+**Funciones del SSRF guard:**
+
+```typescript
+// Verifica si una IP es privada (IPv4 e IPv6)
+isPrivateIp(ip: string): boolean
+
+// Verifica si un hostname esta en la lista de bloqueados
+isBlockedHostname(hostname: string): boolean
+
+// Resuelve DNS y rechaza si alguna IP es privada
+async resolveAndCheckHostname(hostname: string): Promise<string>
+```
+
+**Rangos de IPs bloqueadas:**
+
+| Rango | Descripcion |
+|-------|-------------|
+| `10.0.0.0/8` | Red privada clase A |
+| `172.16.0.0/12` | Red privada clase B |
+| `192.168.0.0/16` | Red privada clase C |
+| `127.0.0.0/8` | Loopback |
+| `169.254.0.0/16` | Link-local (metadata de cloud) |
+| `0.0.0.0/8` | Red no especificada |
+| `::1` | IPv6 loopback |
+| `fc00::/7` | IPv6 unique local |
+| `fe80::/10` | IPv6 link-local |
+
 ### Request Logging
 
 **Ubicacion:** `src/common/middleware/request-logger.middleware.ts`
@@ -360,6 +420,9 @@ Captura todas las excepciones no manejadas y retorna un JSON consistente:
 | URL invalida | 400 | Mensaje del ValidationPipe |
 | URL vacia | 400 | URL is required |
 | Protocolo no HTTP | 400 | Only HTTP and HTTPS URLs are allowed |
+| SSRF - IP privada | 400 | Access to private IP address {ip} is not allowed |
+| SSRF - hostname bloqueado | 400 | Access to {hostname} is not allowed |
+| SSRF - DNS rebinding | 403 | DNS resolution for {hostname} returned private IP {ip}. Access blocked to prevent SSRF. |
 | Timeout | 504 | Request to {url} timed out |
 | DNS falla | 502 | Could not resolve hostname for {url} |
 | Conexion rechazada | 502 | Connection refused by {url} |
@@ -373,7 +436,8 @@ Captura todas las excepciones no manejadas y retorna un JSON consistente:
 - Rechaza URLs vacias
 - Limita longitud maxima a 2048 caracteres
 - Solo permite protocolos `http:` y `https:`
-- Verifica que el hostname sea un FQDN (contenga al menos un punto) o sea localhost/127.0.0.1
+- Verifica que el hostname sea un FQDN (contenga al menos un punto)
+- **Proteccion SSRF**: bloquea IPs privadas (10.x, 172.16-31.x, 192.168.x, 127.x, 169.254.x, 0.x), localhost, y variantes de loopback IPv6
 
 ### DTO Validation (`ScanRequestDto`)
 
@@ -385,7 +449,7 @@ Captura todas las excepciones no manejadas y retorna un JSON consistente:
 
 ## Testing
 
-### Tests Unitarios (250 tests, 31 suites)
+### Tests Unitarios (291 tests, 33 suites)
 
 Los tests unitarios cubren:
 - Cada checker individualmente (15 archivos de test)
@@ -405,6 +469,8 @@ Los tests unitarios cubren:
 - SriCheckerService (integrity attribute parsing)
 - ApiKeyGuard (valid key, missing key, disabled auth)
 - AllExceptionsFilter (HTTP exception, unknown exception)
+- **SsrfGuard** (isPrivateIp IPv4/IPv6, isBlockedHostname, resolveAndCheckHostname, DNS rebinding)
+- **UrlValidationPipe** (SSRF protection: private IPs, localhost, link-local, IPv6 loopback)
 
 Patron de test para checkers:
 ```typescript

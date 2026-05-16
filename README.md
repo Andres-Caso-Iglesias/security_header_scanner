@@ -70,9 +70,10 @@ La herramienta recibe una URL vía API REST, realiza una petición HTTP a la mis
 | Rate Limiting | @nestjs/throttler (20 req/min por IP) |
 | Autenticación | API Key via header `X-API-Key` |
 | CORS | Restringido a `http://localhost:5173` (configurable via `CORS_ORIGIN`) |
+| SSRF Protection | Bloqueo de IPs privadas + resolución DNS antes de cada request |
 | Logging | Middleware HTTP con duración y origen |
 | Documentación API | Swagger / OpenAPI (via @nestjs/swagger) |
-| Testing | Jest + supertest (250 tests, 31 suites) |
+| Testing | Jest + supertest (291 tests, 33 suites) |
 | Export PDF | PDFKit |
 | Historial | SQLite via better-sqlite3 (CRUD endpoints) |
 
@@ -199,6 +200,7 @@ curl -X POST http://localhost:3000/api/scan \
 | **API Key** | Header `X-API-Key` requerido en todos los endpoints | `API_KEY` env var. Vacío = deshabilitado |
 | **Rate Limiting** | Máximo 20 requests por minuto por IP | `RATE_LIMIT_MAX` y `RATE_LIMIT_WINDOW_MS` env vars |
 | **CORS** | Restringido a `http://localhost:5173` por defecto | `CORS_ORIGIN` env var. `*` para abrir a todos |
+| **SSRF Protection** | Bloqueo de IPs privadas (10.x, 172.16-31.x, 192.168.x, 127.x, 169.254.x) + resolución DNS antes de cada request | Automático. Sin configuración |
 | **Logging** | Cada request se registra con método, ruta, status, duración e IP | Automático. Sin configuración |
 
 ## Estructura del Proyecto
@@ -210,7 +212,7 @@ auditoria-web/
 │   ├── app.module.ts             # Módulo raíz + ThrottlerModule + RequestLogger
 │   ├── common/
 │   │   ├── config/               # Seguridad, timeouts (via env vars)
-│   │   ├── guards/               # ApiKeyGuard
+│   │   ├── guards/               # ApiKeyGuard, SsrfGuard (protección SSRF)
 │   │   ├── middleware/           # RequestLoggerMiddleware
 │   │   ├── interfaces/           # Tipos compartidos
 │   │   ├── constants/            # Timeout.config, header-weights
@@ -223,7 +225,7 @@ auditoria-web/
 │   ├── analyzer/                 # Score calculator + 15 header checkers
 │   ├── compliance/               # Mappers OWASP, NIS2, ENS, ISO 27001
 │   └── report/                   # Export PDF/JSON
-├── test/                         # Tests unitarios (250, 31 suites) y e2e
+├── test/                         # Tests unitarios (291, 33 suites) y e2e
 ├── frontend/                     # React 19 + Vite 8 + Tailwind 4
 │   └── src/
 │       ├── components/           # 15 componentes (ScoreCircle, HeaderGrid, ScanProgress, ErrorBoundary, HistoryPanel...)
@@ -248,7 +250,7 @@ El proyecto incluye un pipeline de GitHub Actions en `.github/workflows/ci.yml` 
 
 | Job | Pasos |
 |-----|-------|
-| **Backend** (NestJS) | `npm ci` → `npm run build` → `npm test` (250 tests) |
+| **Backend** (NestJS) | `npm ci` → `npm run build` → `npm test` (291 tests) |
 | **Frontend** (React) | `npm ci` → `tsc -b --noEmit` → `npm run build` → `npm test` (44 tests) |
 
 Ambos jobs corren en **paralelo** con Ubuntu Latest + Node.js 22 y caching de `node_modules`.
@@ -256,7 +258,7 @@ Ambos jobs corren en **paralelo** con Ubuntu Latest + Node.js 22 y caching de `n
 ## Testing
 
 ```bash
-# Backend (250 tests, 31 suites)
+# Backend (291 tests, 33 suites)
 npm test
 npm run test:cov
 

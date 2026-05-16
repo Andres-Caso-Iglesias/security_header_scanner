@@ -524,6 +524,20 @@ La herramienta puede escanear cualquier URL publica accesible via HTTP/HTTPS. Si
 - Algunos sitios bloquean peticiones automatizadas (User-Agent conocido)
 - Sitios detras de Cloudflare u otros WAF pueden devolver paginas de bloqueo en lugar del contenido real
 - La herramienta solo analiza headers, no ejecuta JavaScript ni analiza contenido
+- **Proteccion SSRF**: No se permiten URLs que apunten a IPs privadas, localhost o redes internas. Esto incluye rangos `10.x`, `172.16-31.x`, `192.168.x`, `127.x`, `169.254.x` (metadata de cloud providers) y loopback IPv6. Esta proteccion previene ataques de Server-Side Request Forgery y se aplica tanto en la validacion inicial como antes de cada peticion HTTP/TLS
+
+### Que pasa si intento escanear una URL interna?
+
+### Que pasa si intento escanear una URL interna?
+
+La herramienta rechaza automaticamente URLs que apunten a redes privadas con un error `400 Bad Request`. Esto incluye:
+
+- IPs privadas: `192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`
+- Loopback: `127.0.0.1`, `localhost`, `::1`
+- Metadata de cloud: `169.254.169.254` (AWS, GCP, Azure)
+- IPv6 privadas: `fc00::/7`, `fe80::/10`
+
+Esta proteccion es intencional y previene que la herramienta sea utilizada como vector de ataque SSRF contra infraestructura interna.
 
 ### Como de confiable es el analisis de compliance?
 
@@ -542,3 +556,4 @@ El analisis de compliance (OWASP Top 10, NIS2) se basa unicamente en los headers
 9. **Compliance indicativo**: El mapeo a frameworks normativos es automatico y parcial. No reemplaza una auditoria de compliance real
 10. **Falsos positivos en archivos sensibles**: El escaneo de rutas como `/.env` puede generar falsos positivos. Verificar manualmente cada hallazgo
 11. **Score heuristico**: La ponderacion de headers (CSP=25, HSTS=15, etc.) es una decision de diseno, no un estandar universal
+12. **Solo URLs publicas**: La proteccion SSRF bloquea automaticamente el acceso a IPs privadas, localhost y redes internas. Solo se pueden escanear URLs publicas accesibles desde Internet. Esto incluye bloqueo de rangos `10.x`, `172.16-31.x`, `192.168.x`, `127.x`, `169.254.x` (cloud metadata), y loopback IPv6
