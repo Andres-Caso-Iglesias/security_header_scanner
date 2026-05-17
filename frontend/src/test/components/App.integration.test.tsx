@@ -6,10 +6,29 @@ import App from '../../App';
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
+let sseShouldFail = false;
+
 vi.stubGlobal('EventSource', class MockEventSource {
   onmessage: ((event: MessageEvent) => void) | null = null;
   onerror: (() => void) | null = null;
-  constructor() {}
+  constructor(_url: string) {
+    if (sseShouldFail) {
+      setTimeout(() => {
+        if (this.onerror) this.onerror();
+      }, 0);
+    } else {
+      setTimeout(() => {
+        if (this.onmessage) {
+          this.onmessage({ data: JSON.stringify({ stage: 'http', status: 'scanning', message: 'Solicitando headers HTTP...' }) } as MessageEvent);
+        }
+      }, 0);
+      setTimeout(() => {
+        if (this.onmessage) {
+          this.onmessage({ data: JSON.stringify(validResponse) } as MessageEvent);
+        }
+      }, 0);
+    }
+  }
   close() {}
 });
 
@@ -73,6 +92,7 @@ const validResponse = {
 describe('App Integration', () => {
   beforeEach(() => {
     mockFetch.mockReset();
+    sseShouldFail = false;
   });
 
   it('renderiza el header y el hero inicial', () => {
@@ -118,7 +138,7 @@ describe('App Integration', () => {
 
   it('muestra error de red cuando el fetch falla', async () => {
     const user = userEvent.setup();
-    mockFetch.mockRejectedValueOnce(new Error('Failed to fetch'));
+    sseShouldFail = true;
 
     render(<App />);
 

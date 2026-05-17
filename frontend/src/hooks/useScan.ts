@@ -28,18 +28,6 @@ function classifyError(err: unknown): ScanError {
   return { type: 'unknown', message: msg, details: 'Ocurrió un error inesperado.' };
 }
 
-const PROGRESS_TIMING: { stage: ScanStage; delayMs: number; message: string }[] = [
-  { stage: 'http', delayMs: 300, message: 'Solicitando headers HTTP...' },
-  { stage: 'tls', delayMs: 800, message: 'Verificando conexión TLS...' },
-  { stage: 'dns', delayMs: 1500, message: 'Consultando registros DNS...' },
-  { stage: 'security-files', delayMs: 2500, message: 'Buscando archivos de seguridad...' },
-  { stage: 'sensitive-files', delayMs: 3500, message: 'Escaneando archivos sensibles...' },
-  { stage: 'sri', delayMs: 4500, message: 'Analizando integridad de recursos (SRI)...' },
-  { stage: 'fingerprint', delayMs: 5500, message: 'Identificando tecnologías...' },
-  { stage: 'analysis', delayMs: 7000, message: 'Analizando resultados...' },
-  { stage: 'complete', delayMs: 9000, message: 'Finalizando...' },
-];
-
 const ALL_STAGES: ScanStage[] = [
   'http', 'tls', 'dns', 'security-files',
   'sensitive-files', 'sri', 'fingerprint', 'analysis', 'complete',
@@ -90,60 +78,84 @@ export function useScan(): UseScanReturn {
     setLoading(true);
     setError(null);
     setResult(null);
-    setScanStages([]);
+    setScanStages(ALL_STAGES.map(s => ({ stage: s, status: 'pending' as ScanStageStatus })));
     setScanMessage('Conectando...');
 
     const stageMap = new Map<ScanStage, ScanStageStatus>();
     ALL_STAGES.forEach(s => stageMap.set(s, 'pending'));
-    setScanStages(ALL_STAGES.map(s => ({ stage: s, status: 'pending' as ScanStageStatus })));
 
-    const simTimers: ReturnType<typeof setTimeout>[] = [];
-
-    function updateStage(stage: ScanStage, status: ScanStageStatus, message?: string) {
+    const updateStage = (stage: ScanStage, status: ScanStageStatus, message?: string) => {
       stageMap.set(stage, status);
       if (message) setScanMessage(message);
       setScanStages(Array.from(stageMap.entries()).map(([s, st]) => ({ stage: s, status: st })));
-    }
+    };
 
-    for (const p of PROGRESS_TIMING) {
-      const timer = setTimeout(() => updateStage(p.stage, 'scanning', p.message), p.delayMs * 0.5);
-      simTimers.push(timer);
-      const doneTimer = setTimeout(() => updateStage(p.stage, 'complete'), p.delayMs);
-      simTimers.push(doneTimer);
-    }
+    let evtSource: EventSource | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let completed = false;
 
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      evtSource = new EventSource(`/api/scan/stream?url=${encodeURIComponent(url.trim())}`);
 
-      const res = await fetch('/api/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim() }),
-        signal: controller.signal,
+      timeoutId = setTimeout(() => {
+        if (!completed && evtSource) {
+          evtSource.close();
+          setError({ type: 'timeout', message: 'La solicitud tardó demasiado', details: 'El escaneo excedió el tiempo límite de 30 segundos.' });
+          setLoading(false);
+        }
+      }, 30000);
+
+      await new Promise<void>((resolve, reject) => {
+        evtSource!.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+
+            if (data && typeof data === 'object' && 'score' in data) {
+              completed = true;
+              ALL_STAGES.forEach(s => stageMap.set(s, 'complete'));
+              setScanStages(ALL_STAGES.map(s => ({ stage: s, status: 'complete' })));
+              setScanMessage('Escaneo completado');
+              setResult(data as ScanResult);
+              setHistoryRefresh(n => n + 1);
+              evtSource!.close();
+              resolve();
+            } else if (data && 'stage' in data && 'status' in data) {
+              const stage = data.stage as ScanStage;
+              const status = data.status as ScanStageStatus;
+              const message = data.message as string | undefined;
+
+              if (status === 'error') {
+                completed = true;
+                setError({ type: 'server', message: message || 'Error durante el escaneo', details: data.error });
+                evtSource!.close();
+                reject(new Error(message || 'Scan error'));
+                return;
+              }
+
+              updateStage(stage, status, message);
+            }
+          } catch (parseErr) {
+            // ignore malformed SSE events
+          }
+        };
+
+        evtSource!.onerror = () => {
+          if (!completed && evtSource) {
+            evtSource.close();
+            reject(new Error('Failed to fetch'));
+          }
+        };
       });
-      clearTimeout(timeoutId);
-
-      const data = await res.json();
-      if (!res.ok) {
-        const errMsg = data.message || `Error ${res.status}`;
-        setError(classifyError(errMsg));
-        return;
-      }
-
-      ALL_STAGES.forEach(s => stageMap.set(s, 'complete'));
-      setScanStages(ALL_STAGES.map(s => ({ stage: s, status: 'complete' })));
-      setScanMessage('Escaneo completado');
-      setResult(data as ScanResult);
-      setHistoryRefresh(n => n + 1);
-      setLoading(false);
     } catch (e) {
-      setError(classifyError(e));
+      if (!completed) {
+        setError(classifyError(e));
+      }
     } finally {
-      simTimers.forEach(t => clearTimeout(t));
-      if (!result) setLoading(false);
+      if (timeoutId) clearTimeout(timeoutId);
+      if (evtSource) evtSource.close();
+      if (!completed) setLoading(false);
     }
-  }, [url, result]);
+  }, [url]);
 
   return { url, setUrl, loading, scanStages, scanMessage, result, error, handleScan, resetScan, selectHistory, historyRefresh };
 }
