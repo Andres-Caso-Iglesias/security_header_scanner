@@ -1,8 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
 import { of, Observable } from 'rxjs';
+import type { AxiosResponse } from 'axios';
 import { CveApiService } from '../../../../src/scanner/fingerprint/cve-api.service';
 import { TechFingerprinterService } from '../../../../src/scanner/fingerprint/tech-fingerprinter.service';
+
+function mockAxiosResponse(
+  partial: Partial<AxiosResponse>,
+): Observable<AxiosResponse> {
+  return of({
+    data: null,
+    status: 200,
+    statusText: 'OK',
+    headers: {},
+    config: {} as AxiosResponse['config'],
+    ...partial,
+  } as AxiosResponse);
+}
 
 describe('TechFingerprinterService', () => {
   let service: TechFingerprinterService;
@@ -10,8 +24,17 @@ describe('TechFingerprinterService', () => {
   let cveApi: jest.Mocked<CveApiService>;
 
   beforeEach(async () => {
-    httpService = { get: jest.fn() } as any;
-    cveApi = { queryCves: jest.fn().mockResolvedValue([]) } as any;
+    httpService = {
+      get: jest.fn(),
+      post: jest.fn(),
+      put: jest.fn(),
+      delete: jest.fn(),
+      patch: jest.fn(),
+      request: jest.fn(),
+    } as unknown as jest.Mocked<HttpService>;
+    cveApi = {
+      queryCves: jest.fn().mockResolvedValue([]),
+    } as unknown as jest.Mocked<CveApiService>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -36,7 +59,7 @@ describe('TechFingerprinterService', () => {
     const url = 'https://example.com';
 
     function mockHtmlFetch(html: string): void {
-      httpService.get.mockReturnValue(of({ data: html, status: 200 }));
+      httpService.get.mockReturnValue(mockAxiosResponse({ data: html, status: 200 }));
     }
 
     function mockHtmlFetchError(): void {

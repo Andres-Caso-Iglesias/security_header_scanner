@@ -1,16 +1,36 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
 import { of, Observable } from 'rxjs';
-import { AxiosError, AxiosHeaders } from 'axios';
+import { AxiosError, AxiosHeaders, AxiosResponse } from 'axios';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { HttpClientService } from '../../../../src/scanner/http-client/http-client.service';
+
+function mockAxiosResponse(
+  partial: Partial<AxiosResponse>,
+): Observable<AxiosResponse> {
+  return of({
+    data: null,
+    status: 200,
+    statusText: 'OK',
+    headers: {},
+    config: {} as any,
+    ...partial,
+  } as AxiosResponse);
+}
 
 describe('HttpClientService', () => {
   let service: HttpClientService;
   let httpService: jest.Mocked<HttpService>;
 
   beforeEach(async () => {
-    httpService = { get: jest.fn() } as any;
+    httpService = {
+      get: jest.fn(),
+      post: jest.fn(),
+      put: jest.fn(),
+      delete: jest.fn(),
+      patch: jest.fn(),
+      request: jest.fn(),
+    } as unknown as jest.Mocked<HttpService>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -34,11 +54,10 @@ describe('HttpClientService', () => {
     const url = 'https://example.com';
 
     it('should successfully fetch a URL and return headers, statusCode, responseTime', async () => {
-      const mockResponse = {
+      httpService.get.mockReturnValue(mockAxiosResponse({
         status: 200,
         headers: { 'content-type': 'text/html', 'server': 'nginx' },
-      };
-      httpService.get.mockReturnValue(of(mockResponse));
+      }));
 
       const result = await service.fetch(url);
 
@@ -55,8 +74,7 @@ describe('HttpClientService', () => {
     });
 
     it('should handle null/undefined response headers gracefully', async () => {
-      const mockResponse = { status: 200, headers: null };
-      httpService.get.mockReturnValue(of(mockResponse));
+      httpService.get.mockReturnValue(mockAxiosResponse({ status: 200, headers: null as any }));
 
       const result = await service.fetch(url);
 
@@ -65,8 +83,7 @@ describe('HttpClientService', () => {
     });
 
     it('should handle undefined headers gracefully', async () => {
-      const mockResponse = { status: 200, headers: undefined };
-      httpService.get.mockReturnValue(of(mockResponse));
+      httpService.get.mockReturnValue(mockAxiosResponse({ status: 200, headers: undefined }));
 
       const result = await service.fetch(url);
 
@@ -77,8 +94,7 @@ describe('HttpClientService', () => {
       const axiosHeaders = new AxiosHeaders();
       axiosHeaders.set('content-length', 1234);
       axiosHeaders.set('x-custom', true);
-      const mockResponse = { status: 200, headers: axiosHeaders };
-      httpService.get.mockReturnValue(of(mockResponse));
+      httpService.get.mockReturnValue(mockAxiosResponse({ status: 200, headers: axiosHeaders }));
 
       const result = await service.fetch(url);
 
