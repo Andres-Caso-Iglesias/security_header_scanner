@@ -11,6 +11,7 @@ import { AnalyzerService } from '../analyzer/analyzer.service';
 import { ComplianceService } from '../compliance/compliance.service';
 import { ReportService } from '../report/report.service';
 import { HistoryService } from '../history/history.service';
+import type { TlsInfo } from '../common/interfaces/tls-info.interface';
 import type { ScanResult } from '../common/interfaces/scan-result.interface';
 import type { ScanProgressEvent } from './dto/scan-progress.dto';
 
@@ -92,11 +93,11 @@ export class ScannerService {
           emit('tls', 'complete');
           return r;
         })
-      : Promise.resolve({
+       : Promise.resolve<TlsInfo>({
           checked: false, hostname, port,
           error: 'TLS check only applies to HTTPS URLs',
           tlsVersion: null, certificate: null, grade: 0,
-        } as any).then((r) => {
+        }).then((r) => {
           emit('tls', 'complete');
           return r;
         });

@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import Database from 'better-sqlite3';
 import * as path from 'path';
+import { existsSync, mkdirSync } from 'fs';
 
 export interface HistoryEntry {
   id: number;
@@ -21,8 +22,7 @@ export class HistoryService implements OnModuleInit {
     const dir = path.dirname(dbPath);
 
     try {
-      const fs = require('fs');
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     } catch { /* ignore */ }
 
     this.db = new Database(dbPath);
