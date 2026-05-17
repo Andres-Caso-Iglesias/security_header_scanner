@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { HeaderResult } from '../common/interfaces/header-checker.interface';
+import type { HeaderChecker, HeaderResult } from '../common/interfaces/header-checker.interface';
 import { HEADER_WEIGHTS } from '../common/constants/header-weights';
 import { ScoreCalculator } from './score-calculator';
 import { CspChecker } from './checkers/csp.checker';
@@ -26,25 +26,42 @@ export interface AnalysisResult {
 
 @Injectable()
 export class AnalyzerService {
-  private readonly checkers: Array<{ analyze: (value: string | undefined) => HeaderResult }>;
+  private readonly checkers: HeaderChecker[];
 
-  constructor(private readonly scoreCalculator: ScoreCalculator) {
+  constructor(
+    private readonly scoreCalculator: ScoreCalculator,
+    cspChecker: CspChecker,
+    hstsChecker: HstsChecker,
+    xFrameOptionsChecker: XFrameOptionsChecker,
+    xContentTypeOptionsChecker: XContentTypeOptionsChecker,
+    referrerPolicyChecker: ReferrerPolicyChecker,
+    permissionsPolicyChecker: PermissionsPolicyChecker,
+    cacheControlChecker: CacheControlChecker,
+    corsChecker: CorsChecker,
+    setCookieChecker: SetCookieChecker,
+    corpChecker: CorpChecker,
+    coopChecker: CoopChecker,
+    coepChecker: CoepChecker,
+    xPoweredByChecker: XPoweredByChecker,
+    serverHeaderChecker: ServerHeaderChecker,
+    xXssProtectionChecker: XXssProtectionChecker,
+  ) {
     this.checkers = [
-      new CspChecker(),
-      new HstsChecker(),
-      new XFrameOptionsChecker(),
-      new XContentTypeOptionsChecker(),
-      new ReferrerPolicyChecker(),
-      new PermissionsPolicyChecker(),
-      new CacheControlChecker(),
-      new CorsChecker(),
-      new SetCookieChecker(),
-      new CorpChecker(),
-      new CoopChecker(),
-      new CoepChecker(),
-      new XPoweredByChecker(),
-      new ServerHeaderChecker(),
-      new XXssProtectionChecker(),
+      cspChecker,
+      hstsChecker,
+      xFrameOptionsChecker,
+      xContentTypeOptionsChecker,
+      referrerPolicyChecker,
+      permissionsPolicyChecker,
+      cacheControlChecker,
+      corsChecker,
+      setCookieChecker,
+      corpChecker,
+      coopChecker,
+      coepChecker,
+      xPoweredByChecker,
+      serverHeaderChecker,
+      xXssProtectionChecker,
     ];
   }
 
@@ -61,7 +78,7 @@ export class AnalyzerService {
       const headerValue = normalizedHeaders[headerNameLower];
 
       const checker = this.checkers.find(
-        (c) => (c as unknown as { name: string }).name === config.name,
+        (c) => c.name === config.name,
       );
 
       if (checker) {

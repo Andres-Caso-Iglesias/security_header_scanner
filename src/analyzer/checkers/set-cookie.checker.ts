@@ -1,5 +1,7 @@
+import { Injectable } from '@nestjs/common';
 import type { HeaderChecker, HeaderResult } from '../../common/interfaces/header-checker.interface';
 
+@Injectable()
 export class SetCookieChecker implements HeaderChecker {
   readonly name = 'Set-Cookie';
   readonly severity = 'high' as const;

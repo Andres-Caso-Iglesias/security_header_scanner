@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 export const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
+  BACKEND_PORT: z.coerce.number().int().positive().default(3000),
+  FRONTEND_PORT: z.coerce.number().int().positive().default(5173),
   API_KEY: z.string().default(''),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),

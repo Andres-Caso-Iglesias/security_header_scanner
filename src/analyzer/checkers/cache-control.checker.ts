@@ -1,5 +1,7 @@
+import { Injectable } from '@nestjs/common';
 import type { HeaderChecker, HeaderResult } from '../../common/interfaces/header-checker.interface';
 
+@Injectable()
 export class CacheControlChecker implements HeaderChecker {
   readonly name = 'Cache-Control';
   readonly severity = 'medium' as const;

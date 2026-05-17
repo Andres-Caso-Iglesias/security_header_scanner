@@ -83,4 +83,8 @@ export class HistoryService implements OnModuleInit {
     const info = this.db.prepare(`DELETE FROM scans`).run();
     return info.changes;
   }
+
+  ping(): void {
+    this.db.prepare(`SELECT 1`).get();
+  }
 }

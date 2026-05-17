@@ -1,7 +1,14 @@
 "use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CspChecker = void 0;
-class CspChecker {
+const common_1 = require("@nestjs/common");
+let CspChecker = class CspChecker {
     name = 'CSP';
     severity = 'critical';
     weight = 25;
@@ -64,6 +71,9 @@ class CspChecker {
             recommendation,
         };
     }
-}
+};
 exports.CspChecker = CspChecker;
+exports.CspChecker = CspChecker = __decorate([
+    (0, common_1.Injectable)()
+], CspChecker);
 //# sourceMappingURL=csp.checker.js.map

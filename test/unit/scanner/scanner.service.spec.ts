@@ -13,6 +13,25 @@ import { ReportService } from '../../../src/report/report.service';
 import { ExportService } from '../../../src/report/export/export.service';
 import { ScoreCalculator } from '../../../src/analyzer/score-calculator';
 import { HistoryService } from '../../../src/history/history.service';
+import { CspChecker } from '../../../src/analyzer/checkers/csp.checker';
+import { HstsChecker } from '../../../src/analyzer/checkers/hsts.checker';
+import { XFrameOptionsChecker } from '../../../src/analyzer/checkers/x-frame-options.checker';
+import { XContentTypeOptionsChecker } from '../../../src/analyzer/checkers/x-content-type-options.checker';
+import { ReferrerPolicyChecker } from '../../../src/analyzer/checkers/referrer-policy.checker';
+import { PermissionsPolicyChecker } from '../../../src/analyzer/checkers/permissions-policy.checker';
+import { CacheControlChecker } from '../../../src/analyzer/checkers/cache-control.checker';
+import { CorsChecker } from '../../../src/analyzer/checkers/cors.checker';
+import { SetCookieChecker } from '../../../src/analyzer/checkers/set-cookie.checker';
+import { CorpChecker } from '../../../src/analyzer/checkers/corp.checker';
+import { CoopChecker } from '../../../src/analyzer/checkers/coop.checker';
+import { CoepChecker } from '../../../src/analyzer/checkers/coep.checker';
+import { XPoweredByChecker } from '../../../src/analyzer/checkers/x-powered-by.checker';
+import { ServerHeaderChecker } from '../../../src/analyzer/checkers/server-header.checker';
+import { XXssProtectionChecker } from '../../../src/analyzer/checkers/x-xss-protection.checker';
+import { OwaspTop10Mapper } from '../../../src/compliance/mappers/owasp-top10.mapper';
+import { Nis2Mapper } from '../../../src/compliance/mappers/nis2.mapper';
+import { EnsMapper } from '../../../src/compliance/mappers/ens.mapper';
+import { Iso27001Mapper } from '../../../src/compliance/mappers/iso27001.mapper';
 
 describe('ScannerService', () => {
   let service: ScannerService;
@@ -87,7 +106,26 @@ describe('ScannerService', () => {
         { provide: TechFingerprinterService, useValue: { fingerprint: jest.fn().mockResolvedValue(mockFingerprintResult) } },
         AnalyzerService,
         ScoreCalculator,
+        CspChecker,
+        HstsChecker,
+        XFrameOptionsChecker,
+        XContentTypeOptionsChecker,
+        ReferrerPolicyChecker,
+        PermissionsPolicyChecker,
+        CacheControlChecker,
+        CorsChecker,
+        SetCookieChecker,
+        CorpChecker,
+        CoopChecker,
+        CoepChecker,
+        XPoweredByChecker,
+        ServerHeaderChecker,
+        XXssProtectionChecker,
         ComplianceService,
+        OwaspTop10Mapper,
+        Nis2Mapper,
+        EnsMapper,
+        Iso27001Mapper,
         ReportService,
         HistoryService,
       ],

@@ -19,6 +19,7 @@ Herramienta de análisis pasivo de seguridad web que examina los headers HTTP de
   - [Con Docker](#con-docker)
   - [Sin Docker (desarrollo local)](#sin-docker-desarrollo-local)
   - [Con API Key](#con-api-key)
+- [Variables de Entorno](#variables-de-entorno)
 - [Seguridad de la API](#seguridad-de-la-api)
 - [Estructura del Proyecto](#estructura-del-proyecto)
 - [Documentación](#documentación)
@@ -193,6 +194,29 @@ curl -X POST http://localhost:3000/api/scan \
   -d '{"url":"https://example.com"}'
 ```
 
+## Variables de Entorno
+
+Todas las variables de entorno se validan al inicio con **Zod** (`src/common/config/env.schema.ts`). Si alguna variable tiene un valor inválido, la aplicación se detiene con un mensaje de error descriptivo.
+
+| Variable | Default | Descripción |
+|----------|---------|-------------|
+| `PORT` | `3000` | Puerto interno del backend |
+| `BACKEND_PORT` | `3000` | Puerto expuesto del backend (Docker/start.sh) |
+| `FRONTEND_PORT` | `5173` | Puerto expuesto del frontend (Docker/start.sh) |
+| `API_KEY` | `""` | Clave de autenticación (vacío = deshabilitado) |
+| `RATE_LIMIT_MAX` | `20` | Máximo de requests por ventana |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | Ventana de rate limiting en ms |
+| `CORS_ORIGIN` | `http://localhost:5173` | Origen permitido para CORS |
+| `DB_PATH` | `data/scans.db` | Ruta de la base de datos SQLite |
+| `TIMEOUT_HTTP_CLIENT` | `10000` | Timeout para peticiones HTTP |
+| `TIMEOUT_PAGE_FETCH` | `8000` | Timeout para fetch de páginas |
+| `TIMEOUT_TLS` | `8000` | Timeout para verificación TLS |
+| `TIMEOUT_DNS` | `5000` | Timeout para resolución DNS |
+| `TIMEOUT_SECURITY_FILE` | `5000` | Timeout para archivos de seguridad |
+| `TIMEOUT_SENSITIVE_FILE` | `4000` | Timeout para archivos sensibles |
+| `TIMEOUT_SRI` | `10000` | Timeout para verificación SRI |
+| `TIMEOUT_CVE_API` | `8000` | Timeout para API de CVEs |
+
 ## Seguridad de la API
 
 | Protección | Descripción | Configuración |
@@ -202,6 +226,30 @@ curl -X POST http://localhost:3000/api/scan \
 | **CORS** | Restringido a `http://localhost:5173` por defecto | `CORS_ORIGIN` env var. `*` para abrir a todos |
 | **SSRF Protection** | Bloqueo de IPs privadas (10.x, 172.16-31.x, 192.168.x, 127.x, 169.254.x) + resolución DNS antes de cada request | Automático. Sin configuración |
 | **Logging** | Cada request se registra con método, ruta, status, duración e IP | Automático. Sin configuración |
+
+## Endpoints de API
+
+### Health Check
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/health` | Estado de salud del servicio. Incluye uptime, uso de memoria y conectividad de base de datos SQLite. |
+
+**Respuesta ejemplo:**
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-05-17T12:00:00.000Z",
+  "uptime": 123.45,
+  "memory": { "rss": 123456789, "heapTotal": 45678901, "heapUsed": 34567890, "external": 1234567, "arrayBuffers": 123456 },
+  "database": {
+    "status": "connected",
+    "path": "data/scans.db"
+  }
+}
+```
+
+Si la base de datos no responde, `status` será `"degraded"` y `database.status` será `"disconnected"`.
 
 ## Estructura del Proyecto
 

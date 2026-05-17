@@ -1,5 +1,7 @@
+import { Injectable } from '@nestjs/common';
 import type { HeaderChecker, HeaderResult } from '../../common/interfaces/header-checker.interface';
 
+@Injectable()
 export class ReferrerPolicyChecker implements HeaderChecker {
   readonly name = 'Referrer-Policy';
   readonly severity = 'medium' as const;

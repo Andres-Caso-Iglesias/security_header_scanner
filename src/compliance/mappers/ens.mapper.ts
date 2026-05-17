@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import type { HeaderResult } from '../../common/interfaces/header-checker.interface';
 import type { TlsInfo } from '../../common/interfaces/tls-info.interface';
 import type { DnsInfo } from '../../common/interfaces/dns-info.interface';
@@ -5,6 +6,7 @@ import type { SecurityFileInfo } from '../../common/interfaces/security-file-inf
 import type { TechFingerprintInfo } from '../../common/interfaces/fingerprint-info.interface';
 import type { ComplianceFinding } from '../interfaces/compliance-finding.interface';
 
+@Injectable()
 export class EnsMapper {
   private readonly version = 'RD 311/2022';
 
