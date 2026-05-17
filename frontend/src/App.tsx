@@ -15,10 +15,10 @@ export default function App() {
       <header className="flex justify-between items-center px-8 py-4 border-b border-white/5 max-w-[1400px] mx-auto">
         <div className="flex items-center gap-3">
           <span className="w-[10px] h-[10px] rounded-full bg-[var(--color-accent-green)] inline-block" />
-          <span className="font-bold text-lg text-white">Auditoría de Seguridad Web</span>
+          <span className="font-bold text-lg text-white">Security Header Scanner</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500">v2.1</span>
+          <span className="text-xs text-slate-500">v2.2</span>
           <span className="w-2 h-2 rounded-full bg-[var(--color-accent-green)] inline-block" />
           <span className="text-xs text-slate-400">Online</span>
         </div>

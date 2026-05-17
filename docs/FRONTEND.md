@@ -1,9 +1,9 @@
-# Frontend: React + Vite + Tailwind
+# Frontend: Security Header Scanner & Quick Assessment Tool
 
 > **PROYECTO ACADEMICO** — Esta herramienta fue desarrollada como proyecto de Master en Ciberseguridad.
 > Los resultados son orientativos. No utilizar como unico instrumento de auditoria profesional.
 
-Documentacion tecnica del frontend de la herramienta de auditoria de seguridad web.
+Documentacion tecnica del frontend de la herramienta Security Header Scanner & Quick Assessment Tool.
 
 ## Tabla de Contenidos
 
@@ -41,39 +41,59 @@ frontend/
 ├── src/
 │   ├── main.tsx            # Entry point (ReactDOM.createRoot)
 │   ├── index.css           # Tailwind import + tema + animaciones
-│   ├── App.tsx             # Orquestador principal (14 componentes)
-│   ├── types.ts            # Interfaces del dominio
+│   ├── App.tsx             # Orquestador principal (~98 lineas)
+│   ├── types.ts            # Interfaces del dominio (MIRROR + FRONTEND-ONLY)
+│   ├── hooks/
+│   │   ├── useScan.ts      # Logica de escaneo: state, handleScan, error classification, SSE
+│   │   └── useTabs.ts      # Gestion de tabs del dashboard
 │   ├── lib/
 │   │   └── cn.ts           # Utilidad clsx + tailwind-merge
 │   ├── test/
 │   │   ├── setup.ts        # Config de testing (@testing-library/jest-dom)
 │   │   ├── mock-data.ts    # Datos mock para tests
-│   │   └── components/     # 44 tests, 8 archivos
-│   └── components/         # 15 componentes
-│       ├── ScoreCircle.tsx
-│       ├── ScanForm.tsx
-│       ├── MetaSection.tsx
-│       ├── SslWarning.tsx
-│       ├── HeaderGrid.tsx
-│       ├── TlsSection.tsx
-│       ├── DnsSection.tsx
-│       ├── SriSection.tsx
-│       ├── FingerprintSection.tsx
-│       ├── SensitiveSection.tsx
-│       ├── RecommendationsSection.tsx
-│       ├── ComplianceGrid.tsx
-│       ├── SecurityFilesSection.tsx
-│       ├── ScanProgress.tsx
-│       ├── ErrorBoundary.tsx
-│       └── HistoryPanel.tsx
+│   │   └── components/     # Tests con Vitest + RTL
+│   └── components/         # Organizados por feature
+│       ├── layout/
+│       │   └── ErrorBoundary.tsx
+│       ├── scan/
+│       │   ├── ScanForm.tsx
+│       │   └── ScanProgress.tsx
+│       └── results/
+│           ├── index.ts            # Barrel export
+│           ├── ScoreCircle.tsx
+│           ├── HeaderGrid.tsx
+│           ├── MetaSection.tsx
+│           ├── SslWarning.tsx
+│           ├── TlsSection.tsx
+│           ├── DnsSection.tsx
+│           ├── SriSection.tsx
+│           ├── FingerprintSection.tsx
+│           ├── SensitiveSection.tsx
+│           ├── SecurityFilesSection.tsx
+│           ├── RecommendationsSection.tsx
+│           ├── ComplianceGrid.tsx
+│           └── HistoryPanel.tsx
 └── dist/                   # Build de produccion
 ```
 
 ## Componentes
 
-La aplicacion se organiza en 15 componentes independientes bajo `src/components/`, mas el orquestador `App.tsx`.
+La aplicacion se organiza en componentes agrupados por feature bajo `src/components/`, mas el orquestador `App.tsx` (~98 lineas) que delega toda la logica a custom hooks.
 
-### ScoreCircle
+### Custom Hooks
+
+**`useScan`** — Encapsula toda la logica de escaneo:
+- Estado: `url`, `loading`, `progress`, `results`, `error`
+- `handleScan()`: conecta al endpoint SSE (`/api/scan/stream`) via `EventSource` para recibir progreso en tiempo real
+- Error classification (network, timeout, server, validation)
+- Timeout de 30s como fallback de seguridad
+- `selectHistory()`: carga un escaneo previo del historial
+
+**`useTabs`** — Gestion de tabs del dashboard:
+- Estado: `activeTab`, `setActiveTab`
+- Definicion de tabs disponibles
+
+### Layout Components
 
 Renderiza un grafico circular SVG animado con:
 - Circulo de fondo
@@ -88,11 +108,13 @@ Incluye un **banner de disclaimer** al inicio que advierte: "Mapeo automatico ba
 
 ### ScanProgress
 
-Componente de carga progresiva que muestra el estado en tiempo real de cada etapa del escaneo:
-- Barra de progreso animada con porcentaje
+Componente de carga progresiva que muestra el estado en tiempo real de cada etapa del escaneo via **SSE (Server-Sent Events)**:
+- Barra de progreso animada con porcentaje basado en eventos reales del servidor
 - Lista de 9 etapas con indicador visual: pendiente (circulo), escaneando (spinner SVG), completado (checkmark)
-- Mensaje contextual que describe la operacion actual
+- Mensaje contextual que describe la operacion actual (proporcionado por el servidor)
 - Transicion automatica a resultados cuando el scan finaliza
+
+> **Nota:** El progreso es REAL — se consume el endpoint `/api/scan/stream` via `EventSource`. No se utilizan timeouts simulados.
 
 ### ErrorBoundary
 

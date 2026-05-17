@@ -15,7 +15,7 @@ export class ExportService {
           size: 'A4',
           margins: { top: 50, bottom: 50, left: 50, right: 50 },
           info: {
-            Title: `Auditoria de Seguridad Web - ${result.url}`,
+            Title: `Security Header Scanner - ${result.url}`,
             Author: 'Auditoria Web Scanner',
             Subject: 'Reporte de Auditoria de Headers de Seguridad',
             Keywords: 'seguridad, auditoria, headers, OWASP, NIS2, TLS, DNS',
@@ -87,7 +87,7 @@ export class ExportService {
         // ================================================================
 
         // -- Header --
-        doc.fontSize(20).fillColor(black).text('Auditoria de Seguridad Web', 50, 50, { align: 'center' });
+        doc.fontSize(20).fillColor(black).text('Security Header Scanner', 50, 50, { align: 'center' });
         doc.moveTo(50, 78).lineTo(50 + pageWidth, 78).strokeColor(borderColor).lineWidth(2).stroke();
         doc.fontSize(8).fillColor(midGray).text('Reporte Tecnico de Auditoria', 50, 88, { align: 'center' });
 

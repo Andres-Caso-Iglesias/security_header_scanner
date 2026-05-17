@@ -29,7 +29,7 @@ async function bootstrap() {
 
   app.getHttpAdapter().get('/', (_req: any, res: any) => {
     res.json({
-      name: 'Auditoría de Seguridad Web API',
+      name: 'Security Header Scanner & Quick Assessment Tool API',
       version: '1.0',
       docs: '/api/docs',
       health: '/health',
@@ -37,7 +37,7 @@ async function bootstrap() {
   });
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Auditoría de Seguridad Web - API')
+    .setTitle('Security Header Scanner - API')
     .setDescription(
       'Passive HTTP Security Header Scanner API. ' +
         'Analyzes HTTP response headers against OWASP Secure Headers Project standards, ' +

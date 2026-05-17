@@ -1,4 +1,4 @@
-# Backend: Passive HTTP Security Header Scanner
+# Backend: Security Header Scanner & Quick Assessment Tool
 
 > ⚠️ **PROYECTO ACADEMICO** — Esta herramienta fue desarrollada como proyecto de Master en Ciberseguridad.
 > Los resultados son orientativos. No utilizar como unico instrumento de auditoria profesional.
@@ -30,7 +30,7 @@ Documentacion tecnica detallada del backend NestJS.
 
 ## Arquitectura
 
-El backend sigue la arquitectura modular de NestJS con 4 modulos funcionales independientes. Cada modulo encapsula una responsabilidad del dominio y se comunica con los demas a traves de la inyeccion de dependencias de NestJS.
+El backend sigue la arquitectura modular de NestJS con 6 modulos funcionales independientes. Cada modulo encapsula una responsabilidad del dominio y se comunica con los demas a traves de la inyeccion de dependencias de NestJS. Todos los servicios, checkers (15) y mappers (4) estan registrados como providers y se inyectan via constructor — no se utiliza `new` en ningun punto del codigo de produccion.
 
 ```
 HTTP Request (POST /api/scan)        HTTP Request (GET /api/scan/stream)
@@ -330,7 +330,9 @@ Se ejecuta en el punto de entrada de la API (controller) y rechaza URLs que apun
 
 #### Capa 2: Resolucion DNS dinamica (antes de cada request)
 
-Antes de que cualquier servicio realice una peticion HTTP o conexion TLS, se resuelve el hostname y se verifica que **ninguna** de las IPs devueltas sea privada. Esto protege contra **DNS rebinding attacks**, donde un dominio apunta primero a una IP publica y luego cambia a una privada.
+Antes de que cualquier servicio realice una peticion HTTP o conexion TLS, se resuelve el hostname y se verifica que **ninguna** de las IPs devueltas sea privada. Esto mitiga ataques de **DNS rebinding**, donde un dominio apunta primero a una IP publica y luego cambia a una privada.
+
+> **Nota TOCTOU:** Existe una ventana teorica entre la resolucion DNS y la conexion real donde un atacante con control de DNS podria cambiar la IP. Para un proyecto academico esta proteccion es suficiente. Para produccion se recomendaria un resolver DNS custom o controles a nivel de red.
 
 **Servicios protegidos:**
 - `HttpClientService` — peticion HTTP principal
@@ -449,21 +451,21 @@ Captura todas las excepciones no manejadas y retorna un JSON consistente:
 
 ## Testing
 
-### Tests Unitarios (291 tests, 33 suites)
+### Tests Unitarios (33 suites)
 
 Los tests unitarios cubren:
-- Cada checker individualmente (15 archivos de test)
+- Cada checker individualmente (15 archivos de test) — todos con `@Injectable()`
 - Score calculator con combinaciones de headers
-- Mappers de compliance (OWASP, NIS2)
-- ScannerService con dependencias mockeadas
+- Mappers de compliance (OWASP, NIS2) — todos con `@Injectable()`
+- ScannerService con dependencias mockeadas (incluye 19 providers de DI)
 - ScannerService.scanStream con Subject mocking
 - HttpClientService (timeouts, DNS errors, SSL errors)
-- TlsCheckerService (TLS v1.2, v1.3, expired certs, self-signed)
+- TlsCheckerService (grade calculation directa, SSRF bypassed en tests)
 - DnsCheckerService (SPF, DKIM, DMARC, timeouts, no records)
 - TechFingerprinterService (23 firmas de deteccion)
 - CveApiService (OSV.dev cache, fallback, error handling)
 - ExportService (PDF generation, JSON export)
-- HistoryService (save, findAll, findOne, delete)
+- HistoryService (save, findAll, findOne, delete, ping)
 - SensitiveFileCheckerService (40 rutas, soft 404 detection)
 - SecurityFileCheckerService (robots.txt, security.txt)
 - SriCheckerService (integrity attribute parsing)

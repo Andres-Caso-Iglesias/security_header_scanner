@@ -1,4 +1,4 @@
-# Guia de Uso e Interpretacion de Resultados
+# Guia de Uso e Interpretacion de Resultados — Security Header Scanner & Quick Assessment Tool
 
 > **PROYECTO ACADEMICO**
 >
@@ -6,7 +6,7 @@
 > Los resultados son ORIENTATIVOS y no constituyen una auditoria de seguridad profesional.
 > **No confiar ciegamente en los resultados — verificar manualmente los hallazgos criticos.**
 
-Guia practica para utilizar la herramienta de auditoria de seguridad web y entender los resultados del analisis.
+Guia practica para utilizar el Security Header Scanner & Quick Assessment Tool y entender los resultados del analisis.
 
 ## Tabla de Contenidos
 
@@ -51,15 +51,35 @@ curl -X POST http://localhost:3000/api/scan \
 
 ### Escaneo con progreso en tiempo real (SSE)
 
-La herramienta soporta un endpoint de streaming que envia eventos de progreso mientras se ejecuta el escaneo:
+La herramienta soporta un endpoint de streaming que envia eventos de progreso mientras se ejecuta el escaneo. El frontend consume este endpoint via `EventSource` para mostrar una barra de progreso REAL (no simulada):
 
 ```bash
-curl -N http://localhost:3000/api/scan/stream \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://ejemplo.com"}'
+curl -N http://localhost:3000/api/scan/stream?url=https://ejemplo.com
 ```
 
-Cada etapa del escaneo emite un evento JSON con `stage`, `status` y `message`. Al finalizar, se envía el reporte completo.
+Cada etapa del escaneo emite un evento con `stage`, `status` y `message`. Al finalizar, se envía el reporte completo.
+
+> **Nota:** El frontend ya NO utiliza timeouts simulados. El progreso refleja el estado real del escaneo en el servidor.
+
+### Health Check
+
+```bash
+curl http://localhost:3000/health
+```
+
+Devuelve el estado de salud del servicio, incluyendo uptime, uso de memoria y conectividad de la base de datos SQLite:
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-05-17T12:00:00.000Z",
+  "uptime": 123.45,
+  "memory": { "rss": 123456789, "heapTotal": 45678901, "heapUsed": 34567890 },
+  "database": { "status": "connected", "path": "data/scans.db" }
+}
+```
+
+Si la base de datos no responde, `status` sera `"degraded"` y `database.status` sera `"disconnected"`.
 
 ### Historial de Escaneos
 

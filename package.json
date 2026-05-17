@@ -1,6 +1,6 @@
 {
-  "name": "auditoria-web",
-  "version": "1.0.0",
+  "name": "security-header-scanner",
+  "version": "2.2.0",
   "description": "Passive HTTP Security Header Scanner",
   "private": true,
   "scripts": {

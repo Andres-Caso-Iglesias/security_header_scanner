@@ -1,7 +1,8 @@
-# Skill Registry — auditoria-web
+# Skill Registry — security-header-scanner
 
-## Project Info
-- **Project**: auditoria-web
+> Auto-generated. Do not edit manually.
+
+- **Project**: security-header-scanner
 - **Stack**: NestJS + TypeScript + Node.js
 - **Type**: Web Security Audit Tool (passive header scanner)
 - **SDD Mode**: engram

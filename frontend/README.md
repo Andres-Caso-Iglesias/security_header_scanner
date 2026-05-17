@@ -1,4 +1,4 @@
-# Frontend — Auditoría de Seguridad Web v2.1
+# Frontend — Security Header Scanner & Quick Assessment Tool v2.2
 
 Frontend en React 19 + Vite 8 + Tailwind CSS 4 para la herramienta de auditoría de seguridad web.
 

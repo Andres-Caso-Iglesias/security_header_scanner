@@ -1,4 +1,4 @@
-# Auditoría de Seguridad Web v2.1
+# Security Header Scanner & Quick Assessment Tool v2.2
 
 > **PROYECTO ACADÉMICO — ADVERTENCIA**
 >
@@ -71,12 +71,13 @@ La herramienta recibe una URL vía API REST, realiza una petición HTTP a la mis
 | Rate Limiting | @nestjs/throttler (20 req/min por IP) |
 | Autenticación | API Key via header `X-API-Key` |
 | CORS | Restringido a `http://localhost:5173` (configurable via `CORS_ORIGIN`) |
-| SSRF Protection | Bloqueo de IPs privadas + resolución DNS antes de cada request |
+| SSRF Protection | Bloqueo de IPs privadas + resolución DNS antes de cada request + validación de hostname |
+| Security Headers | Helmet configurado con HSTS, X-Content-Type-Options, X-Frame-Options, etc. |
 | Logging | Middleware HTTP con duración y origen |
 | Documentación API | Swagger / OpenAPI (via @nestjs/swagger) |
-| Testing | Jest + supertest (291 tests, 33 suites) |
+| Testing | Jest + supertest (33 suites) |
 | Export PDF | PDFKit |
-| Historial | SQLite via better-sqlite3 (CRUD endpoints) |
+| Historial | SQLite via better-sqlite3 (CRUD endpoints + health check) |
 
 ### Frontend
 
@@ -86,8 +87,10 @@ La herramienta recibe una URL vía API REST, realiza una petición HTTP a la mis
 | Bundler | Vite 8 |
 | Estilos | Tailwind CSS 4 |
 | Gráficos | Chart.js 4 |
-| Testing | Vitest + React Testing Library (44 tests, 8 archivos) |
+| Testing | Vitest + React Testing Library (8 archivos) |
 | Lenguaje | TypeScript 6 |
+| State Management | Custom hooks (`useScan`, `useTabs`) |
+| Progress | Real-time via SSE (EventSource) |
 
 ### DevOps
 
@@ -144,7 +147,7 @@ Los resultados dependen de la conectividad con el servidor destino, firewalls, W
 
 ```bash
 # Clonar y levantar
-cd auditoria-web
+cd security-header-scanner
 docker compose up -d
 
 # Frontend: http://localhost:5173
@@ -224,6 +227,7 @@ Todas las variables de entorno se validan al inicio con **Zod** (`src/common/con
 | **API Key** | Header `X-API-Key` requerido en todos los endpoints | `API_KEY` env var. Vacío = deshabilitado |
 | **Rate Limiting** | Máximo 20 requests por minuto por IP | `RATE_LIMIT_MAX` y `RATE_LIMIT_WINDOW_MS` env vars |
 | **CORS** | Restringido a `http://localhost:5173` por defecto | `CORS_ORIGIN` env var. `*` para abrir a todos |
+| **Helmet** | Security headers (HSTS, X-Content-Type-Options, X-Frame-Options, etc.) | Automático. Configurado en `main.ts` |
 | **SSRF Protection** | Bloqueo de IPs privadas (10.x, 172.16-31.x, 192.168.x, 127.x, 169.254.x) + resolución DNS antes de cada request | Automático. Sin configuración |
 | **Logging** | Cada request se registra con método, ruta, status, duración e IP | Automático. Sin configuración |
 
@@ -254,35 +258,42 @@ Si la base de datos no responde, `status` será `"degraded"` y `database.status`
 ## Estructura del Proyecto
 
 ```
-auditoria-web/
+security-header-scanner/
 ├── src/                          # Backend NestJS
-│   ├── main.ts                   # Bootstrap + Swagger + API Key scheme
+│   ├── main.ts                   # Bootstrap + Swagger + Helmet + API Key scheme
 │   ├── app.module.ts             # Módulo raíz + ThrottlerModule + RequestLogger
 │   ├── common/
-│   │   ├── config/               # Seguridad, timeouts (via env vars)
+│   │   ├── config/               # Seguridad, timeouts, CORS, env validation (Zod)
 │   │   ├── guards/               # ApiKeyGuard, SsrfGuard (protección SSRF)
 │   │   ├── middleware/           # RequestLoggerMiddleware
 │   │   ├── interfaces/           # Tipos compartidos
 │   │   ├── constants/            # Timeout.config, header-weights
 │   │   ├── filters/              # Global exception filter
-│   │   └── pipes/                # URL validation
+│   │   └── pipes/                # URL validation con SSRF
 │   ├── scanner/                  # Controller, DTOs, HTTP client, TLS, DNS, files, SRI, fingerprint
 │   │   ├── fingerprint/          # Tech detection (23 firmas) + CveApiService (OSV.dev)
 │   │   └── dto/                  # ScanProgressEvent (SSE streaming)
-│   ├── history/                  # SQLite CRUD via better-sqlite3
-│   ├── analyzer/                 # Score calculator + 15 header checkers
-│   ├── compliance/               # Mappers OWASP, NIS2, ENS, ISO 27001
-│   └── report/                   # Export PDF/JSON
-├── test/                         # Tests unitarios (291, 33 suites) y e2e
+│   ├── history/                  # SQLite CRUD via better-sqlite3 + ping()
+│   ├── analyzer/                 # Score calculator + 15 header checkers (DI)
+│   ├── compliance/               # Mappers OWASP, NIS2, ENS, ISO 27001 (DI)
+│   ├── report/                   # Export PDF/JSON
+│   └── health/                   # Health endpoint con check SQLite
+├── test/                         # Tests unitarios (33 suites) y e2e
 ├── frontend/                     # React 19 + Vite 8 + Tailwind 4
 │   └── src/
-│       ├── components/           # 15 componentes (ScoreCircle, HeaderGrid, ScanProgress, ErrorBoundary, HistoryPanel...)
+│       ├── hooks/                # useScan.ts, useTabs.ts
+│       ├── components/           # Organizados por feature:
+│       │   ├── layout/           # ErrorBoundary
+│       │   ├── scan/             # ScanForm, ScanProgress
+│       │   └── results/          # 12 componentes + barrel export
 │       ├── lib/cn.ts             # Utilidad Tailwind
-│       ├── types.ts              # Interfaces TypeScript
-│       └── test/                 # 44 tests (8 archivos) con Vitest + RTL
+│       ├── types.ts              # Interfaces (MIRROR + FRONTEND-ONLY)
+│       └── test/                 # Tests con Vitest + RTL
+├── shared/                       # Tipos compartidos (opcional)
 ├── Dockerfile                    # Backend multi-stage
 ├── docker-compose.yml            # Backend + Frontend + network
 ├── start.sh                      # Script desarrollo local
+├── .env.example                  # Variables de entorno documentadas
 └── docs/                         # Documentación detallada
 ```
 
@@ -298,19 +309,19 @@ El proyecto incluye un pipeline de GitHub Actions en `.github/workflows/ci.yml` 
 
 | Job | Pasos |
 |-----|-------|
-| **Backend** (NestJS) | `npm ci` → `npm run build` → `npm test` (291 tests) |
-| **Frontend** (React) | `npm ci` → `tsc -b --noEmit` → `npm run build` → `npm test` (44 tests) |
+| **Backend** (NestJS) | `npm ci` → `npm run build` → `npm test` |
+| **Frontend** (React) | `npm ci` → `tsc -b --noEmit` → `npm run build` → `npm test` |
 
 Ambos jobs corren en **paralelo** con Ubuntu Latest + Node.js 22 y caching de `node_modules`.
 
 ## Testing
 
 ```bash
-# Backend (291 tests, 33 suites)
+# Backend (33 suites)
 npm test
 npm run test:cov
 
-# Frontend (44 tests, 8 archivos)
+# Frontend (8 archivos)
 cd frontend
 npm test
 ```

@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# Start script — Auditoría de Seguridad Web
+# Start script — Security Header Scanner & Quick Assessment Tool
 # ============================================================
 # Usage:
 #   ./start.sh              # Start both backend and frontend

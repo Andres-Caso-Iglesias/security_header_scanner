@@ -97,7 +97,7 @@ describe('App Integration', () => {
 
   it('renderiza el header y el hero inicial', () => {
     render(<App />);
-    const headers = screen.getAllByText('Auditoría de Seguridad Web');
+    const headers = screen.getAllByText('Security Header Scanner');
     expect(headers.length).toBe(2); // Header bar + Hero title
     expect(screen.getByText('Escanear')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('https://ejemplo.com')).toBeInTheDocument();

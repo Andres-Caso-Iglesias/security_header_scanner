@@ -1,5 +1,5 @@
 # ============================================================
-# Docker Compose — Auditoría de Seguridad Web
+# Docker Compose — Security Header Scanner & Quick Assessment Tool
 # ============================================================
 # Usage:
 #   docker compose up -d              # Start all services

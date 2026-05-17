@@ -12,7 +12,7 @@ export function ScanForm({ url, loading, onUrlChange, onScan }: ScanFormProps) {
     <section className="text-center py-12 px-4">
       <h1 className="text-[2.2rem] font-extrabold tracking-tight mb-2 text-white"
         style={{ textShadow: '0 0 40px rgba(96,165,250,0.15)' }}>
-        Auditoría de Seguridad Web
+        Security Header Scanner
       </h1>
       <p className="text-slate-400 text-base mb-8 max-w-[600px] mx-auto">
         Análisis pasivo de headers HTTP, TLS, DNS y huella digital. Sin intrusión, sin payloads.
