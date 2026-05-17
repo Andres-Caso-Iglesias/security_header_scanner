@@ -153,7 +153,7 @@ export function useScan(): UseScanReturn {
     } finally {
       if (timeoutId) clearTimeout(timeoutId);
       if (evtSource) evtSource.close();
-      if (!completed) setLoading(false);
+      setLoading(false);
     }
   }, [url]);
 
