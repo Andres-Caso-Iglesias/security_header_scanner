@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Chart, registerables } from 'chart.js';
 
 Chart.register(...registerables);
-import type { SriInfo } from '../types';
+import type { SriInfo } from '../../types';
 
 interface SriSectionProps {
   sri: SriInfo;

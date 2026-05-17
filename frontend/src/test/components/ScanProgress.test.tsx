@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ScanProgress } from '../../components/ScanProgress';
-import type { StageInfo } from '../../components/ScanProgress';
+import { ScanProgress } from '../../components/scan/ScanProgress';
+import type { StageInfo } from '../../components/scan/ScanProgress';
 
 describe('ScanProgress', () => {
   const allPending: StageInfo[] = [

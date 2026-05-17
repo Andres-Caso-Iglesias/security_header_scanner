@@ -1,5 +1,5 @@
-import { cn } from '../lib/cn';
-import type { TlsInfo } from '../types';
+import { cn } from '../../lib/cn';
+import type { TlsInfo } from '../../types';
 
 interface SslWarningProps {
   tls: TlsInfo;

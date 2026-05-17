@@ -1,4 +1,4 @@
-import type { SecurityFileInfo } from '../types';
+import type { SecurityFileInfo } from '../../types';
 
 interface SecurityFilesSectionProps {
   securityFiles: SecurityFileInfo;

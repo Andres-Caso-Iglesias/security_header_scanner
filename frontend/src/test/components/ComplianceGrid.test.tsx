@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ComplianceGrid } from '../../components/ComplianceGrid';
+import { ComplianceGrid } from '../../components/results/ComplianceGrid';
 import { mockCompliance } from '../mock-data';
 
 describe('ComplianceGrid', () => {

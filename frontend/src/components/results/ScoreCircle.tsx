@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GRADE_COLORS } from '../types';
+import { GRADE_COLORS } from '../../types';
 
 interface ScoreCircleProps {
   score: number;

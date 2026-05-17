@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { ScanResult } from '../types';
-import { GRADE_COLORS } from '../types';
+import type { ScanResult } from '../../types';
+import { GRADE_COLORS } from '../../types';
 
 interface HistoryEntry {
   id: number;

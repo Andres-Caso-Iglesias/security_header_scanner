@@ -1,5 +1,5 @@
-import { cn } from '../lib/cn';
-import type { SensitiveFilesInfo } from '../types';
+import { cn } from '../../lib/cn';
+import type { SensitiveFilesInfo } from '../../types';
 
 interface SensitiveSectionProps {
   sensitive: SensitiveFilesInfo;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { SslWarning } from '../../components/SslWarning';
+import { SslWarning } from '../../components/results/SslWarning';
 import type { TlsInfo } from '../../types';
 
 const validTls: TlsInfo = {

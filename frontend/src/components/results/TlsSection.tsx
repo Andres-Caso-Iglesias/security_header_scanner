@@ -1,4 +1,4 @@
-import type { TlsInfo } from '../types';
+import type { TlsInfo } from '../../types';
 
 interface TlsSectionProps {
   tls: TlsInfo;

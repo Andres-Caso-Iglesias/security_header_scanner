@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { HeaderGrid } from '../../components/HeaderGrid';
+import { HeaderGrid } from '../../components/results/HeaderGrid';
 import { mockHeaders } from '../mock-data';
 
 describe('HeaderGrid', () => {

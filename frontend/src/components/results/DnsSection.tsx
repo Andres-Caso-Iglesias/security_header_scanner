@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Chart, registerables } from 'chart.js';
 
 Chart.register(...registerables);
-import type { DnsInfo } from '../types';
+import type { DnsInfo } from '../../types';
 
 interface DnsSectionProps {
   dns: DnsInfo;

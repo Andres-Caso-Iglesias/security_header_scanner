@@ -1,4 +1,9 @@
-// ===== Header Analysis =====
+// ============================================================================
+// MIRROR: Keep in sync with backend interfaces in src/common/interfaces/
+// Run `npm run sync-types` to update from backend (script TBD)
+// ============================================================================
+
+// --- from src/common/interfaces/header-checker.interface.ts ---
 export type HeaderSeverity = 'critical' | 'high' | 'medium' | 'low';
 
 export interface HeaderResult {
@@ -13,7 +18,7 @@ export interface HeaderResult {
   recommendation: string;
 }
 
-// ===== Compliance =====
+// --- from src/common/interfaces/scan-result.interface.ts ---
 export type ComplianceStatus = 'compliant' | 'partially_compliant' | 'non_compliant' | 'not_applicable';
 
 export interface ComplianceFinding {
@@ -30,7 +35,30 @@ export interface ComplianceSection {
   findings: ComplianceFinding[];
 }
 
-// ===== TLS/SSL =====
+export interface ScanMetadata {
+  responseTime: number;
+  statusCode: number;
+  analyzedAt: string;
+}
+
+export interface ScanResult {
+  url: string;
+  timestamp: string;
+  score: number;
+  grade: string;
+  headers: HeaderResult[];
+  compliance: ComplianceSection[];
+  recommendations: string[];
+  metadata: ScanMetadata;
+  tls: TlsInfo;
+  dns: DnsInfo;
+  securityFiles: SecurityFileInfo;
+  sri: SriInfo;
+  sensitiveFiles: SensitiveFilesInfo;
+  fingerprint: TechFingerprintInfo;
+}
+
+// --- from src/common/interfaces/tls-info.interface.ts ---
 export interface CertificateInfo {
   subject: string;
   issuer: string;
@@ -55,7 +83,7 @@ export interface TlsInfo {
   grade: number;
 }
 
-// ===== DNS =====
+// --- from src/common/interfaces/dns-info.interface.ts ---
 export interface DnsRecord {
   type: string;
   value: string;
@@ -75,7 +103,7 @@ export interface DnsInfo {
   grade: number;
 }
 
-// ===== Security Files =====
+// --- from src/common/interfaces/security-file-info.interface.ts ---
 export interface SecurityFileCheck {
   path: string;
   present: boolean;
@@ -93,7 +121,7 @@ export interface SecurityFileInfo {
   grade: number;
 }
 
-// ===== SRI =====
+// --- from src/common/interfaces/content-info.interface.ts ---
 export interface SriResource {
   tag: string;
   src: string;
@@ -110,7 +138,6 @@ export interface SriInfo {
   recommendation: string;
 }
 
-// ===== Sensitive Files =====
 export interface SensitiveFileResult {
   path: string;
   statusCode: number | null;
@@ -126,19 +153,19 @@ export interface SensitiveFilesInfo {
   grade: number;
 }
 
-// ===== Fingerprint =====
+// --- from src/common/interfaces/fingerprint-info.interface.ts ---
 export interface DetectedTech {
   name: string;
   version: string | null;
-  category: string;
-  confidence: string;
+  category: 'cms' | 'framework' | 'server' | 'runtime' | 'cdn';
+  confidence: 'high' | 'medium' | 'low';
   evidence: string[];
 }
 
 export interface CveInfo {
   id: string;
   description: string;
-  severity: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
   affectedVersions: string;
 }
 
@@ -150,31 +177,10 @@ export interface TechFingerprintInfo {
   summary: string;
 }
 
-// ===== Scan Result =====
-export interface ScanMetadata {
-  responseTime: number;
-  statusCode: number;
-  analyzedAt: string;
-}
+// ============================================================================
+// FRONTEND-ONLY TYPES (UI state, component props, utility constants)
+// ============================================================================
 
-export interface ScanResult {
-  url: string;
-  timestamp: string;
-  score: number;
-  grade: string;
-  headers: HeaderResult[];
-  compliance: ComplianceSection[];
-  recommendations: string[];
-  metadata: ScanMetadata;
-  tls: TlsInfo;
-  dns: DnsInfo;
-  securityFiles: SecurityFileInfo;
-  sri: SriInfo;
-  sensitiveFiles: SensitiveFilesInfo;
-  fingerprint: TechFingerprintInfo;
-}
-
-// ===== Utility =====
 export const GRADE_COLORS: Record<string, string> = {
   A: '#4ade80',
   B: '#a3e635',

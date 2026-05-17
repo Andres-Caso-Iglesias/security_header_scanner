@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MetaSection } from '../../components/MetaSection';
+import { MetaSection } from '../../components/results/MetaSection';
 import { mockScanResult } from '../mock-data';
 
 describe('MetaSection', () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ScoreCircle } from '../../components/ScoreCircle';
+import { ScoreCircle } from '../../components/results/ScoreCircle';
 
 describe('ScoreCircle', () => {
   it('renderiza el grade y score', () => {

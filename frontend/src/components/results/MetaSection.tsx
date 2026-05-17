@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ScoreCircle } from './ScoreCircle';
-import type { ScanResult } from '../types';
+import type { ScanResult } from '../../types';
 
 interface MetaSectionProps {
   result: ScanResult;

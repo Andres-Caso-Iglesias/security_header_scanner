@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import type { HeaderResult, HeaderSeverity } from '../types';
-import { SEVERITY } from '../types';
+import type { HeaderResult, HeaderSeverity } from '../../types';
+import { SEVERITY } from '../../types';
 
 interface HeaderGridProps {
   headers: HeaderResult[];

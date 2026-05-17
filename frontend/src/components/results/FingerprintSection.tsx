@@ -1,4 +1,4 @@
-import type { TechFingerprintInfo } from '../types';
+import type { TechFingerprintInfo } from '../../types';
 
 interface FingerprintSectionProps {
   fingerprint: TechFingerprintInfo;

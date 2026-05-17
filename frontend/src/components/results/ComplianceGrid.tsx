@@ -1,5 +1,5 @@
-import type { ComplianceSection } from '../types';
-import { COMPLIANCE_COLORS } from '../types';
+import type { ComplianceSection } from '../../types';
+import { COMPLIANCE_COLORS } from '../../types';
 
 interface ComplianceGridProps {
   compliance: ComplianceSection[];
