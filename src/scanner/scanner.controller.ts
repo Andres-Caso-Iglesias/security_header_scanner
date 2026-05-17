@@ -1,13 +1,19 @@
-import { Controller, Post, Get, Body, ValidationPipe, HttpCode, HttpStatus, Res } from '@nestjs/common';
+import { Controller, Post, Get, Body, ValidationPipe, HttpCode, HttpStatus, Res, Query, Sse, UseGuards, BadRequestException } from '@nestjs/common';
 import { Response } from 'express';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiQuery, ApiSecurity } from '@nestjs/swagger';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { from, map } from 'rxjs';
 import { ScannerService } from './scanner.service';
 import { ExportService } from '../report/export/export.service';
 import { ScanRequestDto } from './dto/scan-request.dto';
 import { ExportRequestDto } from './dto/export-request.dto';
 import { ScanResponseDto } from './dto/scan-response.dto';
+import { ApiKeyGuard } from '../common/guards/api-key.guard';
+import { UrlValidationPipe } from '../common/pipes/url-validation.pipe';
 
 @ApiTags('Scanner')
+@ApiSecurity('X-API-Key')
+@UseGuards(ApiKeyGuard)
 @Controller('api')
 export class ScannerController {
   constructor(
@@ -16,6 +22,7 @@ export class ScannerController {
   ) {}
 
   @Post('scan')
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'Scan a URL for security headers',
     description:
@@ -43,7 +50,26 @@ export class ScannerController {
     return this.scannerService.scan(body.url);
   }
 
+  @Get('scan/stream')
+  @UseGuards(ThrottlerGuard)
+  @ApiOperation({
+    summary: 'Stream scan progress via SSE',
+    description:
+      'Returns a Server-Sent Events stream with real-time progress updates as each subsystem completes. The final event contains the complete ScanResult.',
+  })
+  @ApiQuery({ name: 'url', required: true, type: String, description: 'Target URL to scan (must include protocol)' })
+  @Sse()
+  scanStream(@Query('url', UrlValidationPipe) url: string) {
+    const stream = this.scannerService.scanStream(url);
+    return stream.pipe(
+      map((data: unknown) => ({
+        data: JSON.stringify(data),
+      })),
+    );
+  }
+
   @Post('export')
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({
     summary: 'Scan a URL and export the report as PDF or JSON',
     description:

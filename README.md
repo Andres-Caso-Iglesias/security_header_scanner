@@ -1,339 +1,351 @@
-# Auditoria de Seguridad Web
+# Security Header Scanner & Quick Assessment Tool v2.2
 
-Herramienta de auditoria pasiva de seguridad web que analiza los headers HTTP de respuesta de cualquier URL publica, genera un puntaje de seguridad (0-100), identifica headers faltantes o mal configurados, y mapea los resultados contra los frameworks OWASP Top 10, Directiva NIS2, ENS (Esquema Nacional de Seguridad) e ISO 27001.
+> **PROYECTO ACADÉMICO — ADVERTENCIA**
+>
+> Esta herramienta fue desarrollada como **proyecto de Máster en Ciberseguridad** con fines educativos y de investigación.
+> **NO debe utilizarse como único instrumento para auditorías de seguridad profesionales.**
+> Los resultados son orientativos y pueden contener falsos positivos o mediciones incompletas.
+> Lee las [limitaciones conocidas](#limitaciones-conocidas) antes de usar esta herramienta.
+
+Herramienta de análisis pasivo de seguridad web que examina los headers HTTP de respuesta de URLs públicas, genera un puntaje de seguridad (0-100), identifica configuraciones deficientes, y mapea los resultados contra frameworks normativos (OWASP Top 10, NIS2, ENS, ISO 27001).
 
 ## Tabla de Contenidos
 
-- [Descripcion General](#descripcion-general)
-- [Stack Tecnologico](#stack-tecnologico)
+- [Descripción General](#descripción-general)
+- [Stack Tecnológico](#stack-tecnológico)
+- [Limitaciones Conocidas](#limitaciones-conocidas)
 - [Requerimientos](#requerimientos)
-- [Inicio Rapido](#inicio-rapido)
+- [Inicio Rápido](#inicio-rápido)
+  - [Con Docker](#con-docker)
+  - [Sin Docker (desarrollo local)](#sin-docker-desarrollo-local)
+  - [Con API Key](#con-api-key)
+- [Variables de Entorno](#variables-de-entorno)
+- [Seguridad de la API](#seguridad-de-la-api)
 - [Estructura del Proyecto](#estructura-del-proyecto)
-- [Documentacion](#documentacion)
+- [Documentación](#documentación)
 - [Testing](#testing)
+- [Headers Analizados](#headers-analizados)
 - [Licencia](#licencia)
 
-## Descripcion General
+## Descripción General
 
-La herramienta recibe una URL via API REST, realiza una peticion HTTP a la misma, extrae los headers de respuesta, y los analiza contra 15 parametros de seguridad definidos por el OWASP Secure Headers Project. Cada header recibe una calificacion de 0.0 a 1.0 segun su presencia y configuracion. La calificacion total se pondera por severidad para obtener un score 0-100 con grado A-F.
+La herramienta recibe una URL vía API REST, realiza una petición HTTP a la misma, extrae los headers de respuesta y los analiza contra 15 parámetros de seguridad del OWASP Secure Headers Project. Cada header recibe una calificación (0.0-1.0) según su presencia y configuración. La calificación total se pondera por severidad para obtener un score 0-100 con grado A-F.
 
-Adicionalmente, los hallazgos se mapean automaticamente a los controles del OWASP Top 10 (2021) y a los requisitos del Articulo 21 de la Directiva NIS2 (2023).
+**¿Qué hace realmente?**
 
-Casos de uso:
-- Auditoria de seguridad de aplicaciones web
-- Verificacion de cumplimiento normativo
-- Seguimiento continuo de la postura de seguridad
-- Proyectos academicos y formacion en ciberseguridad
+| Componente | ¿Qué mide? | ¿Qué NO mide? |
+|-----------|-----------|--------------|
+| **Headers HTTP** | Presencia, valor y configuración de 15 headers | Vulnerabilidades XSS, SQLi en el contenido |
+| **TLS/SSL** | Versión del protocolo, datos del certificado | Configuración de cifrado, vulnerabilidades TLS |
+| **DNS** | Registros SPF, DKIM, DMARC | Seguridad del servidor DNS, DNSSEC |
+| **Archivos sensibles** | 40 rutas comunes con detección de soft 404 | Contenido real de los archivos |
+| **Fingerprinting** | 23 tecnologías detectables | Versiones exactas no verificadas |
+| **CVEs** | Base local (20) + OSV.dev en tiempo real | Vulnerabilidades no cubiertas por OSV |
+| **Compliance** | Mapeo automático basado en headers | Auditoría de compliance real |
 
-## Stack Tecnologico
+### Casos de uso apropiados
+
+- ✅ Formación académica en ciberseguridad
+- ✅ Demostración de conceptos de seguridad web
+- ✅ Verificación rápida e informal de headers HTTP
+- ✅ Proyectos personales y experimentación
+
+### Casos de uso INAPROPIADOS
+
+- ❌ Auditorías de seguridad profesionales o contractuales
+- ❌ Toma de decisiones sin verificación manual
+- ❌ Evaluación de cumplimiento normativo formal
+- ❌ Herramienta única en un proceso de pentesting
+
+## Stack Tecnológico
 
 ### Backend
 
-| Componente | Tecnologia |
+| Componente | Tecnología |
 |------------|------------|
 | Runtime | Node.js 22 |
 | Framework | NestJS 11 |
 | Lenguaje | TypeScript 5 |
 | HTTP Client | Axios (via @nestjs/axios 4) |
-| Validacion | class-validator + class-transformer |
-| Documentacion API | Swagger / OpenAPI (via @nestjs/swagger) |
-| Testing | Jest + supertest |
+| Validación | class-validator + class-transformer |
+| Rate Limiting | @nestjs/throttler (20 req/min por IP) |
+| Autenticación | API Key via header `X-API-Key` |
+| CORS | Restringido a `http://localhost:5173` (configurable via `CORS_ORIGIN`) |
+| SSRF Protection | Bloqueo de IPs privadas + resolución DNS antes de cada request + validación de hostname |
+| Security Headers | Helmet configurado con HSTS, X-Content-Type-Options, X-Frame-Options, etc. |
+| Logging | Middleware HTTP con duración y origen |
+| Documentación API | Swagger / OpenAPI (via @nestjs/swagger) |
+| Testing | Jest + supertest (33 suites) |
+| Export PDF | PDFKit |
+| Historial | SQLite via better-sqlite3 (CRUD endpoints + health check) |
 
 ### Frontend
 
-| Componente | Tecnologia |
+| Componente | Tecnología |
 |------------|------------|
 | Framework | React 19 |
 | Bundler | Vite 8 |
-| Lenguaje | TypeScript 5 |
-| Proxy dev | Vite server.proxy (/api -> backend) |
+| Estilos | Tailwind CSS 4 |
+| Gráficos | Chart.js 4 |
+| Testing | Vitest + React Testing Library (8 archivos) |
+| Lenguaje | TypeScript 6 |
+| State Management | Custom hooks (`useScan`, `useTabs`) |
+| Progress | Real-time via SSE (EventSource) |
+
+### DevOps
+
+| Componente | Tecnología |
+|------------|------------|
+| Contenedores | Docker + Docker Compose |
+| Proxy Frontend | Nginx (con soporte SSE) |
+| Script Local | `start.sh` |
+
+## Limitaciones Conocidas
+
+### 1. Naturaleza Académica
+
+Esta herramienta fue desarrollada como proyecto de fin de Máster en Ciberseguridad. No ha sido sometida a auditoría de código, revisión de seguridad por terceros, ni certificación de ningún tipo.
+
+### 2. Cobertura Parcial de Compliance
+
+El mapeo a OWASP Top 10, NIS2, ENS e ISO 27001 es **automático y basado exclusivamente en headers HTTP**. Estos frameworks son mucho más amplios e incluyen requisitos organizativos, de procesos y técnicos que no pueden verificarse solo con headers. **El reporte de compliance es indicativo, no concluyente.**
+
+### 3. Base de Datos de CVEs
+
+La detección de CVEs combina:
+- **Base local**: 20 CVEs hardcodeados como respaldo offline
+- **API OSV.dev**: consulta en tiempo real a la base de datos de Open Source Vulnerabilities de Google
+
+La consulta a OSV.dev depende de conectividad a Internet. Si la API no responde (timeout, error de red), se utiliza solo la base local. **La ausencia de CVEs detectados no implica que el sitio esté libre de vulnerabilidades.**
+
+### 4. Score Numérico Heurístico
+
+El score 0-100 se basa en pesos asignados por decisión de diseño (CSP=25, HSTS=15, etc.). No existe un estándar universal para ponderar headers de seguridad. El score es una **guía visual útil, no una certificación de seguridad**.
+
+### 5. Falsos Positivos en Archivos Sensibles
+
+El escaneo de archivos sensibles incluye detección de soft 404 (analiza Content-Type y Content-Length). Sin embargo, puede reportar falsos positivos. Verificar manualmente cada hallazgo antes de actuar.
+
+### 6. Sin Autenticación ni Sesiones
+
+La herramienta no soporta escaneo detrás de login, formularios de autenticación ni sitios que requieran sesión. Solo analiza URLs públicas accesibles sin credenciales.
+
+### 7. Dependencia de Red
+
+Los resultados dependen de la conectividad con el servidor destino, firewalls, WAFs, CDNs, resolución DNS, y latencia de red.
 
 ## Requerimientos
 
-- Node.js >= 18
-- npm >= 9
-- Conexion a internet (para escanear URLs externas)
+- Node.js >= 18 (sin Docker)
+- npm >= 9 (sin Docker)
+- Docker + Docker Compose (con Docker)
+- Conexión a internet (para escanear URLs externas)
 
-## Inicio Rapido
+## Inicio Rápido
+
+### Con Docker
 
 ```bash
-# 1. Clonar o copiar el proyecto
-cd auditoria-web
+# Clonar y levantar
+cd security-header-scanner
+docker compose up -d
 
-# 2. Instalar dependencias del backend
+# Frontend: http://localhost:5173
+# Backend:  http://localhost:3000
+# Swagger:  http://localhost:3000/api/docs
+
+# Para detener
+docker compose down
+
+# Ver logs
+docker compose logs -f
+```
+
+### Sin Docker (desarrollo local)
+
+```bash
+# Usar script automático
+./start.sh
+
+# O manualmente:
+# 1. Backend
 npm install
-
-# 3. Construir el backend
 npm run build
+node dist/main.js              # Puerto 3000
 
-# 4. Iniciar el backend (puerto 3000)
-node dist/main.js
-
-# 5. En otra terminal, instalar e iniciar el frontend
+# 2. Frontend (otra terminal)
 cd frontend
 npm install
-npm run dev     # Puerto 5173 con proxy a :3000
+npm run dev                    # Puerto 5173
 ```
 
-La aplicacion queda accesible en:
-- Frontend: http://localhost:5173
-- API: http://localhost:3000/api/scan
-- Exportacion: http://localhost:3000/api/export
-- Documentacion Swagger: http://localhost:3000/api/docs
+### Con API Key
 
-### Uso con curl (sin frontend)
+Si se configura una API Key, todas las requests a `/api/*` deben incluir el header:
 
 ```bash
-# Escanear y ver resultado en JSON
+# Docker
+API_KEY=mi-clave-secreta docker compose up -d
+
+# Sin Docker
+API_KEY=mi-clave-secreta node dist/main.js
+
+# Uso
 curl -X POST http://localhost:3000/api/scan \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: mi-clave-secreta" \
   -d '{"url":"https://example.com"}'
-
-# Exportar reporte PDF
-curl -X POST http://localhost:3000/api/export \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://example.com","format":"pdf"}' \
-  --output reporte.pdf
-
-# Exportar reporte JSON
-curl -X POST http://localhost:3000/api/export \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://example.com","format":"json"}' \
-  --output reporte.json
 ```
 
-## Estructura del Proyecto
+## Variables de Entorno
 
-```
-auditoria-web/
-├── src/                          # Backend NestJS
-│   ├── main.ts                   # Bootstrap + Swagger
-│   ├── app.module.ts             # Modulo raiz
-│   ├── common/                   # Interfaces, constantes, filtros, pipes
-│   ├── scanner/                  # Controller, DTOs, HTTP client, TLS, DNS, files, content, fingerprint
-│   │   ├── tls/                  #   Verificacion TLS/SSL
-│   │   ├── dns/                  #   Verificacion DNS (SPF/DKIM/DMARC)
-│   │   ├── files/                #   Security.txt + robots.txt + sensitive files
-│   │   ├── content/              #   SRI (Subresource Integrity)
-│   │   └── fingerprint/          #   Tech fingerprinting + CVE detection
-│   ├── analyzer/                 # Score calculator + 15 header checkers
-│   ├── compliance/               # Mappers OWASP Top 10 + NIS2
-│   └── report/
-│       ├── export/               # Export PDF/JSON service
-│       └── ...                   # Generacion de reportes
-├── test/                         # Tests unitarios y e2e
-│   ├── unit/                     # 19 suites de tests (83 tests)
-│   └── e2e/                      # Tests de integracion
-├── frontend/                     # Frontend React + Vite
-│   ├── src/
-│   │   ├── App.tsx               # Componente principal
-│   │   └── App.css               # Estilos
-│   ├── index.html
-│   └── vite.config.ts            # Proxy a backend
-├── docs/                         # Documentacion detallada
-│   ├── BACKEND.md
-│   ├── FRONTEND.md
-│   └── GUIA_USO.md
-├── package.json
-├── tsconfig.json
-└── nest-cli.json
-```
+Todas las variables de entorno se validan al inicio con **Zod** (`src/common/config/env.schema.ts`). Si alguna variable tiene un valor inválido, la aplicación se detiene con un mensaje de error descriptivo.
 
-## Documentacion
+| Variable | Default | Descripción |
+|----------|---------|-------------|
+| `PORT` | `3000` | Puerto interno del backend |
+| `BACKEND_PORT` | `3000` | Puerto expuesto del backend (Docker/start.sh) |
+| `FRONTEND_PORT` | `5173` | Puerto expuesto del frontend (Docker/start.sh) |
+| `API_KEY` | `""` | Clave de autenticación (vacío = deshabilitado) |
+| `RATE_LIMIT_MAX` | `20` | Máximo de requests por ventana |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | Ventana de rate limiting en ms |
+| `CORS_ORIGIN` | `http://localhost:5173` | Origen permitido para CORS |
+| `DB_PATH` | `data/scans.db` | Ruta de la base de datos SQLite |
+| `TIMEOUT_HTTP_CLIENT` | `10000` | Timeout para peticiones HTTP |
+| `TIMEOUT_PAGE_FETCH` | `8000` | Timeout para fetch de páginas |
+| `TIMEOUT_TLS` | `8000` | Timeout para verificación TLS |
+| `TIMEOUT_DNS` | `5000` | Timeout para resolución DNS |
+| `TIMEOUT_SECURITY_FILE` | `5000` | Timeout para archivos de seguridad |
+| `TIMEOUT_SENSITIVE_FILE` | `4000` | Timeout para archivos sensibles |
+| `TIMEOUT_SRI` | `10000` | Timeout para verificación SRI |
+| `TIMEOUT_CVE_API` | `8000` | Timeout para API de CVEs |
 
-- [docs/BACKEND.md](docs/BACKEND.md): Arquitectura del backend, modulos, checkers, scoring, API
-- [docs/FRONTEND.md](docs/FRONTEND.md): Frontend React + Vite, componentes, proxy, build
-- [docs/GUIA_USO.md](docs/GUIA_USO.md): Guia de uso e interpretacion de resultados
+## Seguridad de la API
 
-## Testing
+| Protección | Descripción | Configuración |
+|-----------|-------------|---------------|
+| **API Key** | Header `X-API-Key` requerido en todos los endpoints | `API_KEY` env var. Vacío = deshabilitado |
+| **Rate Limiting** | Máximo 20 requests por minuto por IP | `RATE_LIMIT_MAX` y `RATE_LIMIT_WINDOW_MS` env vars |
+| **CORS** | Restringido a `http://localhost:5173` por defecto | `CORS_ORIGIN` env var. `*` para abrir a todos |
+| **Helmet** | Security headers (HSTS, X-Content-Type-Options, X-Frame-Options, etc.) | Automático. Configurado en `main.ts` |
+| **SSRF Protection** | Bloqueo de IPs privadas (10.x, 172.16-31.x, 192.168.x, 127.x, 169.254.x) + resolución DNS antes de cada request | Automático. Sin configuración |
+| **Logging** | Cada request se registra con método, ruta, status, duración e IP | Automático. Sin configuración |
 
-```bash
-# Tests unitarios (83 tests, 19 suites)
-npm test
+## Endpoints de API
 
-# Tests e2e
-npm run test:e2e
+### Health Check
 
-# Cobertura
-npm run test:cov
-```
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/health` | Estado de salud del servicio. Incluye uptime, uso de memoria y conectividad de base de datos SQLite. |
 
-## API Reference
-
-### POST /api/export
-
-Escanea una URL y descarga el reporte en formato PDF o JSON.
-
-**Request body:**
+**Respuesta ejemplo:**
 ```json
 {
-  "url": "https://example.com",
-  "format": "pdf"
-}
-```
-
-**Formatos:**
-| Formato | Content-Type | Uso |
-|---------|-------------|-----|
-| `json` | application/json | Procesamiento automatico, integracion con herramientas |
-| `pdf` | application/pdf | Evidencia tecnica para audits, compliance, informes |
-
-**Response:** Archivo descargable con `Content-Disposition: attachment`.
-
-### POST /api/scan
-
-Escanea una URL y devuelve un reporte de seguridad.
-
-**Request body:**
-```json
-{
-  "url": "https://example.com"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "url": "https://example.com",
-  "timestamp": "2026-05-11T20:00:00.000Z",
-  "score": 71,
-  "grade": "C",
-  "headers": [
-    {
-      "header": "Content-Security-Policy",
-      "present": true,
-      "value": "default-src 'self'",
-      "grade": 0.4,
-      "severity": "critical",
-      "weight": 25,
-      "finding": "CSP is present but contains unsafe-inline",
-      "recommendation": "Remove unsafe directives"
-    }
-  ],
-  "compliance": [
-    {
-      "framework": "OWASP Top 10",
-      "version": "2021",
-      "findings": [...]
-    },
-    {
-      "framework": "NIS2 Directive",
-      "version": "2023",
-      "findings": [...]
-    }
-  ],
-  "recommendations": [
-    "[CRITICAL] Implement a strict CSP policy...",
-    "[HIGH] Add: Strict-Transport-Security..."
-  ],
-  "tls": {
-    "checked": true,
-    "hostname": "example.com",
-    "port": 443,
-    "error": null,
-    "tlsVersion": "TLSv1.3",
-    "certificate": {
-      "subject": "CN=example.com",
-      "issuer": "C=US, O=Example CA",
-      "validFrom": "Jan 1 00:00:00 2025 GMT",
-      "validTo": "Jan 1 00:00:00 2026 GMT",
-      "expiresInDays": 100,
-      "expired": false,
-      "selfSigned": false,
-      "wildcard": false,
-      "fingerprint": "AA:BB:CC:DD:EE:FF:00:11...",
-      "serialNumber": "1234567890",
-      "san": ["example.com"]
-    },
-    "grade": 1.0
-  },
-  "dns": {
-    "hostname": "example.com",
-    "checked": true,
-    "error": null,
-    "spf": {
-      "type": "SPF", "value": "v=spf1 include:_spf.google.com -all",
-      "present": true, "grade": 1.0,
-      "finding": "SPF record with hard fail and authorised senders",
-      "recommendation": "SPF is properly configured"
-    },
-    "dkim": {
-      "type": "DKIM", "value": "v=DKIM1; p=...",
-      "present": true, "grade": 1.0,
-      "finding": "DKIM record found with public key",
-      "recommendation": "DKIM is properly configured"
-    },
-    "dmarc": {
-      "type": "DMARC", "value": "v=DMARC1; p=reject; rua=mailto:dmarc@...",
-      "present": true, "grade": 1.0,
-      "finding": "DMARC with p=reject and reporting",
-      "recommendation": "DMARC is properly configured"
-    },
-    "grade": 1.0
-  },
-  "metadata": {
-    "responseTime": 212,
-    "statusCode": 200,
-    "analyzedAt": "2026-05-11T20:00:00.000Z"
+  "status": "ok",
+  "timestamp": "2026-05-17T12:00:00.000Z",
+  "uptime": 123.45,
+  "memory": { "rss": 123456789, "heapTotal": 45678901, "heapUsed": 34567890, "external": 1234567, "arrayBuffers": 123456 },
+  "database": {
+    "status": "connected",
+    "path": "data/scans.db"
   }
 }
 ```
 
-**Errores:**
-| Codigo | Significado |
-|--------|-------------|
-| 400 | URL invalida o mal formada |
-| 502 | No se pudo alcanzar el destino (DNS, timeout, SSL) |
+Si la base de datos no responde, `status` será `"degraded"` y `database.status` será `"disconnected"`.
+
+## Estructura del Proyecto
+
+```
+security-header-scanner/
+├── src/                          # Backend NestJS
+│   ├── main.ts                   # Bootstrap + Swagger + Helmet + API Key scheme
+│   ├── app.module.ts             # Módulo raíz + ThrottlerModule + RequestLogger
+│   ├── common/
+│   │   ├── config/               # Seguridad, timeouts, CORS, env validation (Zod)
+│   │   ├── guards/               # ApiKeyGuard, SsrfGuard (protección SSRF)
+│   │   ├── middleware/           # RequestLoggerMiddleware
+│   │   ├── interfaces/           # Tipos compartidos
+│   │   ├── constants/            # Timeout.config, header-weights
+│   │   ├── filters/              # Global exception filter
+│   │   └── pipes/                # URL validation con SSRF
+│   ├── scanner/                  # Controller, DTOs, HTTP client, TLS, DNS, files, SRI, fingerprint
+│   │   ├── fingerprint/          # Tech detection (23 firmas) + CveApiService (OSV.dev)
+│   │   └── dto/                  # ScanProgressEvent (SSE streaming)
+│   ├── history/                  # SQLite CRUD via better-sqlite3 + ping()
+│   ├── analyzer/                 # Score calculator + 15 header checkers (DI)
+│   ├── compliance/               # Mappers OWASP, NIS2, ENS, ISO 27001 (DI)
+│   ├── report/                   # Export PDF/JSON
+│   └── health/                   # Health endpoint con check SQLite
+├── test/                         # Tests unitarios (33 suites) y e2e
+├── frontend/                     # React 19 + Vite 8 + Tailwind 4
+│   └── src/
+│       ├── hooks/                # useScan.ts, useTabs.ts
+│       ├── components/           # Organizados por feature:
+│       │   ├── layout/           # ErrorBoundary
+│       │   ├── scan/             # ScanForm, ScanProgress
+│       │   └── results/          # 12 componentes + barrel export
+│       ├── lib/cn.ts             # Utilidad Tailwind
+│       ├── types.ts              # Interfaces (MIRROR + FRONTEND-ONLY)
+│       └── test/                 # Tests con Vitest + RTL
+├── shared/                       # Tipos compartidos (opcional)
+├── Dockerfile                    # Backend multi-stage
+├── docker-compose.yml            # Backend + Frontend + network
+├── start.sh                      # Script desarrollo local
+├── .env.example                  # Variables de entorno documentadas
+└── docs/                         # Documentación detallada
+```
+
+## Documentación
+
+- [docs/BACKEND.md](docs/BACKEND.md): Arquitectura del backend, módulos, checkers, scoring, API, seguridad
+- [docs/FRONTEND.md](docs/FRONTEND.md): Frontend React + Vite + Tailwind, componentes, testing
+- [docs/GUIA_USO.md](docs/GUIA_USO.md): Guía de uso e interpretación de resultados
+
+## CI/CD
+
+El proyecto incluye un pipeline de GitHub Actions en `.github/workflows/ci.yml` que se ejecuta en **push a `main`** y en **Pull Requests**:
+
+| Job | Pasos |
+|-----|-------|
+| **Backend** (NestJS) | `npm ci` → `npm run build` → `npm test` |
+| **Frontend** (React) | `npm ci` → `tsc -b --noEmit` → `npm run build` → `npm test` |
+
+Ambos jobs corren en **paralelo** con Ubuntu Latest + Node.js 22 y caching de `node_modules`.
+
+## Testing
+
+```bash
+# Backend (33 suites)
+npm test
+npm run test:cov
+
+# Frontend (8 archivos)
+cd frontend
+npm test
+```
 
 ## Headers Analizados
 
-| Header | Severidad | Peso | Funcion |
-|--------|-----------|------|---------|
-| Content-Security-Policy | critical | 25 | Previene XSS e inyeccion de datos |
-| Strict-Transport-Security | high | 15 | Fuerza conexiones HTTPS |
-| X-Frame-Options | high | 15 | Previene clickjacking |
-| X-Content-Type-Options | medium | 10 | Previene MIME sniffing |
-| Referrer-Policy | medium | 10 | Controla fuga de informacion referente |
-| Permissions-Policy | medium | 10 | Restringe APIs del navegador |
-| Cache-Control | medium | 10 | Previene cacheo de datos sensibles |
-| Access-Control-Allow-Origin | high | 15 | Previene abuso CORS |
-| Set-Cookie | high | 15 | Flags de seguridad en cookies |
-| Cross-Origin-Resource-Policy | medium | 10 | Previene carga cross-origin |
-| Cross-Origin-Opener-Policy | medium | 10 | Aislamiento contra ataques cross-origin |
-| Cross-Origin-Embedder-Policy | low | 5 | Previene embedding cross-origin |
-| X-Powered-By | low | 5 | Detecta fuga de tecnologia |
-| Server | low | 5 | Detecta fuga de informacion del servidor |
-| X-XSS-Protection | low | 5 | Header deprecado (se prefiere CSP) |
+| Header | Severidad | Peso |
+|--------|-----------|------|
+| Content-Security-Policy | critical | 25 |
+| Strict-Transport-Security | high | 15 |
+| X-Frame-Options | high | 15 |
+| X-Content-Type-Options | medium | 10 |
+| Referrer-Policy | medium | 10 |
+| Permissions-Policy | medium | 10 |
+| Cache-Control | medium | 10 |
+| Access-Control-Allow-Origin | high | 15 |
+| Set-Cookie | high | 15 |
+| Cross-Origin-Resource-Policy | medium | 10 |
+| Cross-Origin-Opener-Policy | medium | 10 |
+| Cross-Origin-Embedder-Policy | low | 5 |
+| X-Powered-By | low | 5 |
+| Server | low | 5 |
+| X-XSS-Protection | low | 5 |
 
-## Verificaciones Adicionales
+## Licencia
 
-### TLS / SSL
-- Version del protocolo (TLSv1.3, TLSv1.2, etc.)
-- Estado del certificado (validez, emisor, expiracion, SAN, self-signed, wildcard)
-- Alerta preventiva cuando el certificado expira en menos de 30 dias
-
-### DNS / Email Security
-- **SPF**: registro TXT del dominio verificando mecanismo all e include
-- **DKIM**: busqueda en selectores comunes (default, google, selector1, etc.)
-- **DMARC**: registro `_dmarc.{dominio}` con politica, reporting y cobertura
-
-### Archivos de Seguridad
-- **security.txt** (RFC 9116): deteccion y analisis de campos obligatorios (Contact, Expires)
-- **robots.txt**: deteccion de rutas sensibles expuestas (admin, backup, .git, .env)
-
-### Subresource Integrity (SRI)
-- Analisis de etiquetas `<script src>` y `<link rel="stylesheet" href>` en el HTML
-- Verifica presencia del atributo `integrity` en cada recurso externo
-- Recursos sin SRI se muestran truncados con opcion de expandir al hacer click
-
-### Archivos Sensibles
-- Escaneo de 40 rutas sensibles comunes (`.env`, `.git/config`, `phpinfo.php`, `web.config`, `.htaccess`, etc.)
-- HEAD requests en lotes de 5 en paralelo para detectar exposicion accidental
-
-### Fingerprinting de Tecnologias
-- Deteccion de CMS: WordPress, Joomla, Drupal (via meta generator, paths, headers)
-- Deteccion de frameworks: Express, ASP.NET, Laravel, Django, jQuery, Bootstrap
-- Deteccion de servidores: Nginx, Apache, Cloudflare
-- Deteccion de runtimes: PHP
-- Base de datos integrada de **20 CVEs conocidos** mapeados por tecnologia y version
-- Las recomendaciones de CVEs aparecen con severidad CRITICAL/HIGH/MEDIUM
+Proyecto académico — Máster en Ciberseguridad — Andrés Caso Iglesias

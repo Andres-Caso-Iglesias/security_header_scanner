@@ -12,10 +12,12 @@ import type { ComplianceSection } from '../common/interfaces/scan-result.interfa
 
 @Injectable()
 export class ComplianceService {
-  private readonly owaspMapper = new OwaspTop10Mapper();
-  private readonly nis2Mapper = new Nis2Mapper();
-  private readonly ensMapper = new EnsMapper();
-  private readonly iso27001Mapper = new Iso27001Mapper();
+  constructor(
+    private readonly owaspMapper: OwaspTop10Mapper,
+    private readonly nis2Mapper: Nis2Mapper,
+    private readonly ensMapper: EnsMapper,
+    private readonly iso27001Mapper: Iso27001Mapper,
+  ) {}
 
   evaluate(
     headers: HeaderResult[],

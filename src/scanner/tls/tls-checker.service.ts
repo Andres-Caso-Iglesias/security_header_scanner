@@ -2,15 +2,32 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as tls from 'tls';
 import * as net from 'net';
 import type { TlsInfo, CertificateInfo } from '../../common/interfaces/tls-info.interface';
+import { TIMEOUTS } from '../../common/constants/timeout.config';
+import { resolveAndCheckHostname } from '../../common/guards/ssrf.guard';
 
 @Injectable()
 export class TlsCheckerService {
   private readonly logger = new Logger(TlsCheckerService.name);
-  private readonly timeoutMs = 8000;
+  private readonly timeoutMs = TIMEOUTS.TLS;
   private readonly defaultPort = 443;
 
   async check(hostname: string, port?: number): Promise<TlsInfo> {
     const targetPort = port ?? this.defaultPort;
+
+    try {
+      await resolveAndCheckHostname(hostname);
+    } catch (error) {
+      this.logger.warn(`SSRF check failed for ${hostname}:${targetPort} — ${(error as Error).message}`);
+      return {
+        checked: true,
+        hostname,
+        port: targetPort,
+        error: (error as Error).message,
+        tlsVersion: null,
+        certificate: null,
+        grade: 0,
+      };
+    }
 
     try {
       return await this.performTlsCheck(hostname, targetPort);

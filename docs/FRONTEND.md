@@ -1,6 +1,9 @@
-# Frontend: React + Vite
+# Frontend: Security Header Scanner & Quick Assessment Tool
 
-Documentacion tecnica del frontend de la herramienta de auditoria de seguridad web.
+> **PROYECTO ACADEMICO** — Esta herramienta fue desarrollada como proyecto de Master en Ciberseguridad.
+> Los resultados son orientativos. No utilizar como unico instrumento de auditoria profesional.
+
+Documentacion tecnica del frontend de la herramienta Security Header Scanner & Quick Assessment Tool.
 
 ## Tabla de Contenidos
 
@@ -19,194 +22,162 @@ Documentacion tecnica del frontend de la herramienta de auditoria de seguridad w
 |------------|---------|-----|
 | React | 19 | Libreria de UI |
 | Vite | 8 | Bundler y dev server |
-| TypeScript | 5 | Tipado |
-| CSS | puro | Sin frameworks externos |
+| TypeScript | 6 | Tipado |
+| Tailwind CSS | 4 | Estilos (utility-first) |
+| Chart.js | 4 | Graficos (donut de DNS y SRI) |
+| Vitest | 3 | Testing unitario |
+| React Testing Library | 16 | Testing de componentes |
 
 ## Estructura
 
 ```
 frontend/
-├── index.html              # HTML base
-├── vite.config.ts          # Configuracion Vite + proxy
+├── index.html              # HTML base (con Inter font)
+├── vite.config.ts          # Configuracion Vite + Tailwind plugin + proxy
+├── vitest.config.ts        # Configuracion Vitest (jsdom, setup)
+├── nginx.conf              # Configuracion Nginx para Docker
+├── Dockerfile              # Multi-stage build + Nginx
 ├── package.json
-├── tsconfig.json
 ├── src/
 │   ├── main.tsx            # Entry point (ReactDOM.createRoot)
-│   ├── index.css           # Reset minimo
-│   ├── App.tsx             # Componente principal
-│   └── App.css             # Todos los estilos
+│   ├── index.css           # Tailwind import + tema + animaciones
+│   ├── App.tsx             # Orquestador principal (~98 lineas)
+│   ├── types.ts            # Interfaces del dominio (MIRROR + FRONTEND-ONLY)
+│   ├── hooks/
+│   │   ├── useScan.ts      # Logica de escaneo: state, handleScan, error classification, SSE
+│   │   └── useTabs.ts      # Gestion de tabs del dashboard
+│   ├── lib/
+│   │   └── cn.ts           # Utilidad clsx + tailwind-merge
+│   ├── test/
+│   │   ├── setup.ts        # Config de testing (@testing-library/jest-dom)
+│   │   ├── mock-data.ts    # Datos mock para tests
+│   │   └── components/     # Tests con Vitest + RTL
+│   └── components/         # Organizados por feature
+│       ├── layout/
+│       │   └── ErrorBoundary.tsx
+│       ├── scan/
+│       │   ├── ScanForm.tsx
+│       │   └── ScanProgress.tsx
+│       └── results/
+│           ├── index.ts            # Barrel export
+│           ├── ScoreCircle.tsx
+│           ├── HeaderGrid.tsx
+│           ├── MetaSection.tsx
+│           ├── SslWarning.tsx
+│           ├── TlsSection.tsx
+│           ├── DnsSection.tsx
+│           ├── SriSection.tsx
+│           ├── FingerprintSection.tsx
+│           ├── SensitiveSection.tsx
+│           ├── SecurityFilesSection.tsx
+│           ├── RecommendationsSection.tsx
+│           ├── ComplianceGrid.tsx
+│           └── HistoryPanel.tsx
 └── dist/                   # Build de produccion
 ```
 
 ## Componentes
 
-La aplicacion es un SPA de un solo componente (`App.tsx`) con los siguientes elementos funcionales:
+La aplicacion se organiza en componentes agrupados por feature bajo `src/components/`, mas el orquestador `App.tsx` (~98 lineas) que delega toda la logica a custom hooks.
 
-### ScanForm
+### Custom Hooks
 
-Formulario de entrada compuesto por:
-- Input de texto con placeholder "https://ejemplo.com"
-- Boton "Escanear"
-- Soporte para tecla Enter
-- Estado disabled durante la carga
+**`useScan`** — Encapsula toda la logica de escaneo:
+- Estado: `url`, `loading`, `progress`, `results`, `error`
+- `handleScan()`: conecta al endpoint SSE (`/api/scan/stream`) via `EventSource` para recibir progreso en tiempo real
+- Error classification (network, timeout, server, validation)
+- Timeout de 30s como fallback de seguridad
+- `selectHistory()`: carga un escaneo previo del historial
 
-### ScoreCircle
+**`useTabs`** — Gestion de tabs del dashboard:
+- Estado: `activeTab`, `setActiveTab`
+- Definicion de tabs disponibles
 
-Componente que renderiza un grafico circular SVG con:
-- Circulo de fondo gris oscuro
-- Arco de progreso coloreado segun el grado (A=verde, B=verde claro, C=amarillo, D=naranja, E=rojo, F=rojo oscuro)
-- Texto central con el grado (letra grande) y el score numerico
-- Animacion de transicion en el arco (1s ease-in-out)
+### Layout Components
 
-Colores por grado:
-```typescript
-const gradeColors = {
-  A: '#22c55e',
-  B: '#84cc16',
-  C: '#eab308',
-  D: '#f97316',
-  E: '#ef4444',
-  F: '#dc2626',
-}
-```
+Renderiza un grafico circular SVG animado con:
+- Circulo de fondo
+- Arco de progreso coloreado segun el grado (A-F)
+- Texto SVG centrado: letra del grade + puntuacion numerica
+- Subtitulo "SECURITY SCORE" debajo del grafico con **tooltip informativo** (icono `?`) que explica la formula de calculo del score y sus limitaciones
 
-### ScoreHeader
+### ComplianceGrid
 
-Barra superior centrada con:
-- ScoreCircle (izquierda)
-- Metadatos del scan en grilla 2x2: URL, status code, tiempo de respuesta, headers analizados, TLS, recomendaciones
-- Contenido con max-width de 960px y centrado
+Cuatro tarjetas en fila (OWASP, NIS2, ENS, ISO 27001), cada una con score, dots de estado y lista de findings.
+Incluye un **banner de disclaimer** al inicio que advierte: "Mapeo automatico basado solo en headers. No reemplaza una auditoria formal."
 
-### HeaderGrid
+### ScanProgress
 
-Grilla de 3 columnas (2 en mobile) con tarjetas de headers. Cada tarjeta contiene:
-- Nombre del header (monospace)
-- Icono de estado (OK/Regular/AUSENTE) coloreado por severidad
-- Barra de progreso horizontal animada (0-100%)
-- Badge de severidad (critical/high/medium/low)
-- Valor numerico del grade
-- Texto del hallazgo
-- Texto de la recomendacion
+Componente de carga progresiva que muestra el estado en tiempo real de cada etapa del escaneo via **SSE (Server-Sent Events)**:
+- Barra de progreso animada con porcentaje basado en eventos reales del servidor
+- Lista de 9 etapas con indicador visual: pendiente (circulo), escaneando (spinner SVG), completado (checkmark)
+- Mensaje contextual que describe la operacion actual (proporcionado por el servidor)
+- Transicion automatica a resultados cuando el scan finaliza
 
-Las tarjetas tienen un borde izquierdo de 3px coloreado por severidad:
-- critical: rojo (#dc2626)
-- high: naranja (#f97316)
-- medium: amarillo (#eab308)
-- low: verde (#22c55e)
+> **Nota:** El progreso es REAL — se consume el endpoint `/api/scan/stream` via `EventSource`. No se utilizan timeouts simulados.
 
-### ComplianceSection
+### ErrorBoundary
 
-Aparece en la columna derecha (1/3 del ancho) junto a los headers. Incluye:
-- Nombre del control
-- Status coloreado (compliant=verde, partially_compliant=amarillo, non_compliant=rojo, not_applicable=gris)
-- Descripcion del hallazgo
-- Recomendacion
-- Headers relacionados (si aplica)
+Wrapper que captura errores de renderizado en componentes hijos. Cada tab del dashboard esta envuelto en su propio ErrorBoundary:
+- Muestra mensaje de error especifico para la seccion fallida
+- Boton "Reintentar" que resetea el estado
+- Los demas tabs continuan funcionando sin interrupcion
+- Implementado como clase de React (componentDidCatch)
 
-### TLS Section
+### HistoryPanel
 
-Dos tarjetas en grilla de 2 columnas (dentro de una fila 50/50 junto a DNS):
-- Conexion: version TLS, host, puerto, grade
-- Certificado: sujeto, emisor, validez, self-signed, wildcard, SAN
+Panel lateral que muestra el historial de escaneos previos almacenados en el backend (SQLite):
 
-### SSL Expiration Warning
+- Lista de escaneos con URL, score, grado y timestamp
+- Boton "Cargar" que restaura los resultados del escaneo seleccionado
+- Boton "Eliminar" que borra el escaneo del historial
+- Integrado via `GET /api/history`, `GET /api/history/:id`, `DELETE /api/history/:id`
 
-Banner prominente debajo del resumen del scan que aparece cuando el certificado SSL:
-- Ha expirado: fondo rojo con mensaje "CERTIFICADO EXPIRADO"
-- Expira en menos de 30 dias: fondo naranja con cuenta regresiva
+### Estados de Error
 
-### Fila 1: Security Files + Sensitive Files
+La aplicacion maneja un tipo `ScanError` con 4 categorias:
 
-**Security Files:** Dos tarjetas en columna (`security.txt` RFC 9116 y `robots.txt`) con estado encontrado/ausente, contenido y recomendaciones.
+| Tipo | Significado | Accion |
+|------|-------------|--------|
+| `network` | Error de conexion al backend | Reintentar |
+| `timeout` | El escaneo excedio el tiempo limite | Reintentar con URL mas rapida |
+| `server` | Error interno del servidor (502, 5xx) | Reintentar mas tarde |
+| `validation` | URL invalida o mal formada | Corregir la URL |
 
-**Sensitive Files:** Advertencia de archivos sensibles expuestos con lista de rutas y codigos de estado HTTP.
+Cada tab del dashboard esta envuelto en su propio `ErrorBoundary` (clase React con `componentDidCatch`) que muestra un mensaje especifico y boton "Reintentar" sin afectar los demas tabs.
 
-Fila 50/50, emparejada con Archivos de Seguridad.
-
-### Columna izquierda (2/3)
-
-La columna principal contiene en orden:
-1. **Headers de Seguridad** - 15 tarjetas en grilla de 3 columnas
-2. **TLS / SSL** - Conexion y certificado
-3. **DNS / Email Security** - SPF, DKIM, DMARC
-4. **Archivos de Seguridad** - security.txt y robots.txt
-5. **Archivos Sensibles** - 40 rutas sensibles escaneadas
-
-### Columna derecha (1/3)
-
-**Cumplimiento Normativo** - 4 frameworks: OWASP Top 10, NIS2, ENS, ISO 27001
-
-### Filas inferiores (full-width)
-
-**SRI + Fingerprinting** en fila 50/50:
-- **SRI:** Resumen colapsable por defecto (estadistica + link "Mostrar recursos sin integrity"). Al hacer click se expande la lista de recursos con URLs truncadas (expandibles individualmente).
-- **Fingerprinting:** Tecnologias detectadas con nombre, version, confianza y evidencias. Tarjetas de CVE con ID, severidad y descripcion.
-
-### Recomendaciones (full-width)
-
-4 columnas (CRITICAL, HIGH, MEDIUM, LOW) que ocupan todo el ancho. Items truncados con ellipsis, expandibles al hacer click.
-
-### RecommendationsList
-
-4 columnas (CRITICAL, HIGH, MEDIUM, LOW) que ocupan todo el ancho de la pantalla. Cada item se trunca a una linea con ellipsis y se expande al hacer click para ver el texto completo.
-
-Lista de recomendaciones ordenadas por severidad, cada una con formato `[SEVERIDAD] texto`.
-
-### ExportButtons
-
-Barra de botones centrada debajo del ScoreHeader:
-- Copiar JSON: copia el reporte al portapapeles
-- Descargar JSON: descarga el reporte como archivo .json
-- Descargar PDF: genera y descarga un documento PDF profesional
+### SecurityFilesSection
 
 ## Layout de Resultados
 
-La seccion de resultados utiliza un layout de ancho completo:
+La seccion de resultados utiliza tabs para organizar la informacion:
 
 ```
 +------------------------------------------------------------+
-|  .results (width: 100vw, centrado con calc(-50vw + 50%))   |
-|                                                             |
-|  +---------------------------+----------------------------+ |
-|  |  .result-header           |  (max-width: 960px, cent.) | |
-|  |  [ScoreCircle] [Meta]     |                            | |
-|  +---------------------------+----------------------------+ |
-|                                                             |
-|  +---------------------------+----------------------------+ |
-|  |  .export-buttons          |  (max-width: 960px, cent.) | |
-|  |  [Copiar] [JSON] [PDF]    |                            | |
-|  +---------------------------+----------------------------+ |
-|                                                             |
-|  +----------------------------+----------------------------+ |
-|  |  .column-main (flex: 2)    | .column-side (flex: 1)     | |
-|  |  Headers de Seguridad      | Cumplimiento Normativo     | |
-|  |  TLS / SSL                 | OWASP + NIS2 + ENS        | |
-|  |  DNS / Email Security      | + ISO 27001               | |
-|  |  Archivos de Seguridad     |                            | |
-|  |  Archivos Sensibles        |                            | |
-|  +----------------------------+----------------------------+ |
-|  |  SRI (col-half) colapsable  | Fingerprinting (col-half) | |
-|  |  Mostrar/Ocultar detalles  | CMS, CVEs, tecnologias    | |
-|  +----------------------------+----------------------------+ |
-|                                                             |
-|  +--------------------------------------------------------+ |
-|  |  Recomendaciones (full-width, 4 columnas truncables)    | |
-|  |  CRITICAL | HIGH | MEDIUM | LOW                         | |
-|  +--------------------------------------------------------+ |
+|  [ScoreCircle]  [URL]                                       |
+|                  [HTTP Status] [Tiempo] [Headers] [TLS][DNS]|
+|                  [Descargar JSON] [Descargar PDF]           |
++------------------------------------------------------------+
+|  [SSL Warning - si aplica]                                  |
++------------------------------------------------------------+
+|  Headers | Cumplimiento | TLS/SSL | DNS | SRI | ...        |
++------------------------------------------------------------+
+|  Contenido del tab activo                                   |
++------------------------------------------------------------+
+|  Archivos de Seguridad (siempre visible)                    |
++------------------------------------------------------------+
+|  Footer                                                     |
 +------------------------------------------------------------+
 ```
-
-En mobile (<768px), las columnas de headers y compliance se apilan verticalmente, y la grilla de headers pasa a 2 columnas.
 
 ## Exportacion de Reportes
 
-El frontend provee 3 mecanismos de exportacion:
+El frontend provee 2 mecanismos de exportacion via `POST /api/export`:
 
-| Boton | Formato | Metodo |
-|-------|---------|--------|
-| Copiar JSON | text/plain | navigator.clipboard.writeText() |
-| Descargar JSON | .json file | fetch + Blob + download link |
-| Descargar PDF | .pdf file | fetch + Blob + download link |
+| Boton | Formato | Comportamiento |
+|-------|---------|---------------|
+| Descargar JSON | .json | fetch → Blob → download link |
+| Descargar PDF | .pdf | fetch → Blob → download link |
 
 Todos llaman al endpoint `POST /api/export` con el formato correspondiente.
 
@@ -247,25 +218,24 @@ La aplicacion maneja 4 estados visuales:
 
 ### Estado inicial
 - Header con titulo y descripcion
-- Input de URL vacio
-- Boton deshabilitado hasta que se ingrese texto
+- Input de URL + boton "Escanear"
+- Pills informativas (15+ headers, TLS/DNS, compliance)
 
 ### Estado de carga
+- Skeleton loaders (circulo + rectangulos animados)
 - Input deshabilitado
-- Boton muestra animacion de spinner
-- Barra de progreso animada debajo
+- Boton con spinner SVG
 
 ### Estado de exito
-- Animacion fade-in del reporte
-- ScoreCircle con el resultado
-- HeaderGrid con los 15 headers (3 por fila)
-- Columns layout: headers (2/3) + compliance (1/3)
-- TLS section con certificado
-- Recommendations list
-- Botones de exportacion
+- ScoreCircle con animacion del arco
+- SSL Warning (si aplica)
+- Tabs: Headers, Cumplimiento, TLS/SSL, DNS, SRI, Fingerprinting, Sensibles, Recomendaciones
+- Contenido del tab activo
+- Archivos de Seguridad (siempre visibles)
+- Botones de exportacion funcionales
 
 ### Estado de error
-- Banner rojo con mensaje de error
+- Banner con fondo rojo y mensaje de error
 - El formulario permanece interactivo para reintentar
 
 ## Build y Deploy

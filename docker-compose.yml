@@ -1,0 +1,61 @@
+# ============================================================
+# Docker Compose — Security Header Scanner & Quick Assessment Tool
+# ============================================================
+# Usage:
+#   docker compose up -d              # Start all services
+#   docker compose down               # Stop all services
+#   docker compose logs -f            # Follow logs
+#   API_KEY=secret docker compose up -d   # With API key
+# ============================================================
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auditoria-backend
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - API_KEY=${API_KEY:-}
+      - RATE_LIMIT_MAX=${RATE_LIMIT_MAX:-20}
+      - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS:-60000}
+      # Subsystem timeouts (optional overrides)
+      - TIMEOUT_HTTP_CLIENT=${TIMEOUT_HTTP_CLIENT:-10000}
+      - TIMEOUT_TLS=${TIMEOUT_TLS:-8000}
+      - TIMEOUT_DNS=${TIMEOUT_DNS:-5000}
+      - TIMEOUT_CVE_API=${TIMEOUT_CVE_API:-8000}
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/docs"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: auditoria-frontend
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+networks:
+  app-network:
+    driver: bridge

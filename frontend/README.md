@@ -1,73 +1,105 @@
-# React + TypeScript + Vite
+# Frontend — Security Header Scanner & Quick Assessment Tool v2.2
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend en React 19 + Vite 8 + Tailwind CSS 4 para la herramienta de auditoría de seguridad web.
 
-Currently, two official plugins are available:
+> ⚠️ Proyecto académico — No usar como única herramienta de auditoría profesional.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Stack
 
-## React Compiler
+| Tecnología | Versión | Propósito |
+|-----------|---------|-----------|
+| React | 19 | UI |
+| TypeScript | 6 | Tipado |
+| Vite | 8 | Bundler / dev server |
+| Tailwind CSS | 4 | Estilos |
+| Chart.js | 4 | Gráficos (DNS, SRI) |
+| Vitest | 3 | Testing |
+| React Testing Library | 16 | Testing de componentes |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Scripts
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev         # Dev server (localhost:5173)
+npm run build       # Build producción → dist/
+npm run lint        # ESLint
+npm run preview     # Vista previa del build
+npm test            # Tests (44 tests, 8 suites)
+npm run test:watch  # Tests en modo watch
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Estructura
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+src/
+├── main.tsx                  Entry point
+├── index.css                 Tailwind + tema + animaciones
+├── App.tsx                   Orquestador principal
+├── types.ts                  Interfaces del dominio
+├── lib/
+│   └── cn.ts                 Utilidad Tailwind (clsx + tailwind-merge)
+├── test/
+│   ├── setup.ts              Config Vitest
+│   ├── mock-data.ts          Datos mock
+│   └── components/           44 tests (8 archivos)
+└── components/               15 componentes
+    ├── ScoreCircle.tsx        SVG animado de puntuación
+    ├── ScanForm.tsx           Input URL + botón escanear
+    ├── MetaSection.tsx        Score + metadatos + exportación
+    ├── SslWarning.tsx         Alerta de certificado expirado
+    ├── HeaderGrid.tsx         Grid de headers con filtro
+    ├── TlsSection.tsx         Datos TLS/SSL
+    ├── DnsSection.tsx         Registros DNS + gráfico
+    ├── SriSection.tsx         SRI + gráfico
+    ├── FingerprintSection.tsx Fingerprinting + CVEs
+    ├── SensitiveSection.tsx   Archivos sensibles expuestos
+    ├── RecommendationsSection.tsx Recomendaciones por severidad
+    ├── ComplianceGrid.tsx     Frameworks normativos + disclaimer
+    ├── ScanProgress.tsx       Progreso de escaneo en tiempo real
+    ├── ErrorBoundary.tsx      Captura errores por tab
+    └── HistoryPanel.tsx       Historial de escaneos previos
+```
+
+## Docker
+
+```bash
+docker build -t auditoria-frontend .
+docker run -p 5173:80 auditoria-frontend
+```
+
+O via docker-compose desde la raíz del proyecto.
+
+## API
+
+El frontend se comunica con el backend NestJS. En desarrollo via proxy de Vite, en producción via Nginx.
+
+| Endpoint | Método | Propósito |
+|----------|--------|-----------|
+| `/api/scan` | POST | Ejecuta escaneo de URL |
+| `/api/scan/stream` | POST | Escaneo con progreso SSE en tiempo real |
+| `/api/export` | POST | Descarga reporte (JSON/PDF) |
+| `/api/history` | GET | Lista historial de escaneos |
+| `/api/history/:id` | GET | Obtiene escaneo del historial |
+| `/api/history/:id` | DELETE | Elimina escaneo del historial |
+
+## Tests
+
+```bash
+npm test            # Ejecuta todos los tests
+npm run test:watch  # Modo watch
+```
+
+44 tests distribuidos en 8 archivos:
+- `ScoreCircle.test.tsx` — render, colores, tooltip
+- `HeaderGrid.test.tsx` — filtro por severidad
+- `MetaSection.test.tsx` — métricas, botones de descarga
+- `ComplianceGrid.test.tsx` — disclaimer, frameworks
+- `SslWarning.test.tsx` — certificado expirado/próximo
+- `ScanProgress.test.tsx` — progreso de 9 etapas, estados, animaciones
+- `ErrorBoundary.test.tsx` — captura de errores, botón reintentar
+- `App.integration.test.tsx` — flujo completo (formulario → scan → resultados)
+
+## Limitaciones
+
+- No tiene autenticación ni manejo de sesiones
+- Los resultados dependen del backend y la conectividad de red
+- Esta es una herramienta académica, no un producto de seguridad profesional

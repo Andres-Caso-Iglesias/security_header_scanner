@@ -1,11 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as dns from 'dns/promises';
 import type { DnsInfo, DnsRecord } from '../../common/interfaces/dns-info.interface';
+import { TIMEOUTS } from '../../common/constants/timeout.config';
 
 @Injectable()
 export class DnsCheckerService {
   private readonly logger = new Logger(DnsCheckerService.name);
-  private readonly timeoutMs = 5000;
+  private readonly timeoutMs = TIMEOUTS.DNS;
 
   async check(hostname: string): Promise<DnsInfo> {
     try {

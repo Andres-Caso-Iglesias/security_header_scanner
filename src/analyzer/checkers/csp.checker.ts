@@ -1,5 +1,7 @@
+import { Injectable } from '@nestjs/common';
 import type { HeaderChecker, HeaderResult } from '../../common/interfaces/header-checker.interface';
 
+@Injectable()
 export class CspChecker implements HeaderChecker {
   readonly name = 'CSP';
   readonly severity = 'critical' as const;

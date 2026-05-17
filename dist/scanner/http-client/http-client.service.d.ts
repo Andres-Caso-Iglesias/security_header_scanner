@@ -6,6 +6,7 @@ export interface HttpClientResult {
 }
 export declare class HttpClientService {
     private readonly httpService;
+    private readonly logger;
     private readonly userAgent;
     constructor(httpService: HttpService);
     fetch(url: string): Promise<HttpClientResult>;

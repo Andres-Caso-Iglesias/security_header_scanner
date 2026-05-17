@@ -1,6 +1,12 @@
-# Guia de Uso e Interpretacion de Resultados
+# Guia de Uso e Interpretacion de Resultados — Security Header Scanner & Quick Assessment Tool
 
-Guia practica para utilizar la herramienta de auditoria de seguridad web y entender los resultados del analisis.
+> **PROYECTO ACADEMICO**
+>
+> Esta herramienta fue desarrollada como proyecto de Master en Ciberseguridad con fines educativos.
+> Los resultados son ORIENTATIVOS y no constituyen una auditoria de seguridad profesional.
+> **No confiar ciegamente en los resultados — verificar manualmente los hallazgos criticos.**
+
+Guia practica para utilizar el Security Header Scanner & Quick Assessment Tool y entender los resultados del analisis.
 
 ## Tabla de Contenidos
 
@@ -26,6 +32,7 @@ Guia practica para utilizar la herramienta de auditoria de seguridad web y enten
 6. Revise el reporte generado con las secciones de headers, TLS, DNS, archivos de seguridad, SRI, archivos sensibles, fingerprinting y recomendaciones
 7. Si el certificado SSL esta expirado o proximo a expirar, aparecera un aviso destacado en la parte superior del reporte
 8. Los textos largos (URLs de SRI, recomendaciones) se truncan con un click para expandir al contenido completo
+9. El panel de **Historial** (a la derecha) muestra los escaneos previos. Puede cargar un resultado anterior o eliminar entradas del historial
 
 ### Via API (curl)
 
@@ -41,6 +48,51 @@ curl -X POST http://localhost:3000/api/scan \
 2. Expanda el endpoint POST /api/scan
 3. Haga clic en "Try it out"
 4. Ingrese la URL y ejecute
+
+### Escaneo con progreso en tiempo real (SSE)
+
+La herramienta soporta un endpoint de streaming que envia eventos de progreso mientras se ejecuta el escaneo. El frontend consume este endpoint via `EventSource` para mostrar una barra de progreso REAL (no simulada):
+
+```bash
+curl -N http://localhost:3000/api/scan/stream?url=https://ejemplo.com
+```
+
+Cada etapa del escaneo emite un evento con `stage`, `status` y `message`. Al finalizar, se envía el reporte completo.
+
+> **Nota:** El frontend ya NO utiliza timeouts simulados. El progreso refleja el estado real del escaneo en el servidor.
+
+### Health Check
+
+```bash
+curl http://localhost:3000/health
+```
+
+Devuelve el estado de salud del servicio, incluyendo uptime, uso de memoria y conectividad de la base de datos SQLite:
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-05-17T12:00:00.000Z",
+  "uptime": 123.45,
+  "memory": { "rss": 123456789, "heapTotal": 45678901, "heapUsed": 34567890 },
+  "database": { "status": "connected", "path": "data/scans.db" }
+}
+```
+
+Si la base de datos no responde, `status` sera `"degraded"` y `database.status` sera `"disconnected"`.
+
+### Historial de Escaneos
+
+```bash
+# Listar historial
+curl http://localhost:3000/api/history
+
+# Obtener escaneo especifico
+curl http://localhost:3000/api/history/1
+
+# Eliminar escaneo
+curl -X DELETE http://localhost:3000/api/history/1
+```
 
 ### Exportar Reporte PDF
 
@@ -255,7 +307,7 @@ El atributo `integrity` en etiquetas `<script>` y `<link rel="stylesheet">` perm
 
 ### Archivos Sensibles
 
-Escaneo pasivo de 40 rutas comunes que pueden exponer informacion critica:
+Escaneo pasivo de 40 rutas comunes que pueden exponer informacion critica. Incluye deteccion de falsos positivos:
 
 | Ruta | Riesgo |
 |------|--------|
@@ -268,11 +320,18 @@ Escaneo pasivo de 40 rutas comunes que pueden exponer informacion critica:
 | `Dockerfile` | Configuracion de contenedores |
 | `backup/`, `logs/`, `private/` | Directorios con contenido sensible |
 
+**Confianza del resultado:** Cada hallazgo incluye un nivel de confianza:
+- **high**: respuesta con contenido no-HTML (JSON, texto plano) — exposicion real probable
+- **medium**: respuesta HTML pequena — posible pagina simple
+- **low**: respuesta HTML grande — probable soft 404, verificar manualmente
+
 ### Fingerprinting de Tecnologias
 
-Identifica el stack tecnologico del sitio: CMS, framework, servidor, runtime y CDN. Cuando se detecta una version concreta, se consulta una base de datos interna de 20 CVEs conocidos para alertar sobre vulnerabilidades publicas.
+Identifica el stack tecnologico del sitio: CMS, framework, servidor, runtime y CDN. Cuando se detecta una version concreta, se consulta:
+1. **Base de datos local** de 20 CVEs conocidos
+2. **API OSV.dev** (Google Open Source Vulnerabilities) — consulta en tiempo real con millones de registros actualizados
 
-**Tecnologias detectables:** WordPress, Joomla, Drupal, PHP, Express, ASP.NET, Laravel, Django, Nginx, Apache, Cloudflare, jQuery, Bootstrap, Google Analytics.
+**Tecnologias detectables (23):** WordPress, Joomla, Drupal, PHP, Express, ASP.NET, Laravel, Django, Nginx, Apache, Cloudflare, jQuery, Bootstrap, Google Analytics, **Vite, Webpack, Next.js, Nuxt.js, Ruby on Rails, Tomcat, IIS, Gunicorn, Node.js, Python**.
 
 **Interpretacion de confianza:**
 - **high**: detectado por meta generator, header explicito o patron inequivoco
@@ -458,6 +517,18 @@ Las calificaciones bajas generalmente se deben a:
 
 Revise las recomendaciones del reporte para identificar que headers corregir primero.
 
+### Necesito una API Key para usar la herramienta?
+
+Depende de como este configurado el servidor:
+- **Sin API Key (default)**: acceso libre a todos los endpoints
+- **Con API Key**: todas las requests deben incluir el header `X-API-Key`
+
+Si ves errores `401 Unauthorized`, contacta al administrador del servidor para obtener una API Key.
+
+### Por que veo "429 Too Many Requests"?
+
+El servidor tiene un limite de 20 requests por minuto por direccion IP. Espera un minuto y vuelve a intentar. Este limite es configurable por el administrador del servidor.
+
 ### Que significa un grade de 1.0 en CORS o Set-Cookie cuando el header esta ausente?
 
 En el caso de CORS y Set-Cookie, la ausencia del header se considera segura:
@@ -473,6 +544,20 @@ La herramienta puede escanear cualquier URL publica accesible via HTTP/HTTPS. Si
 - Algunos sitios bloquean peticiones automatizadas (User-Agent conocido)
 - Sitios detras de Cloudflare u otros WAF pueden devolver paginas de bloqueo en lugar del contenido real
 - La herramienta solo analiza headers, no ejecuta JavaScript ni analiza contenido
+- **Proteccion SSRF**: No se permiten URLs que apunten a IPs privadas, localhost o redes internas. Esto incluye rangos `10.x`, `172.16-31.x`, `192.168.x`, `127.x`, `169.254.x` (metadata de cloud providers) y loopback IPv6. Esta proteccion previene ataques de Server-Side Request Forgery y se aplica tanto en la validacion inicial como antes de cada peticion HTTP/TLS
+
+### Que pasa si intento escanear una URL interna?
+
+### Que pasa si intento escanear una URL interna?
+
+La herramienta rechaza automaticamente URLs que apunten a redes privadas con un error `400 Bad Request`. Esto incluye:
+
+- IPs privadas: `192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`
+- Loopback: `127.0.0.1`, `localhost`, `::1`
+- Metadata de cloud: `169.254.169.254` (AWS, GCP, Azure)
+- IPv6 privadas: `fc00::/7`, `fe80::/10`
+
+Esta proteccion es intencional y previene que la herramienta sea utilizada como vector de ataque SSRF contra infraestructura interna.
 
 ### Como de confiable es el analisis de compliance?
 
@@ -483,7 +568,12 @@ El analisis de compliance (OWASP Top 10, NIS2) se basa unicamente en los headers
 1. **Solo headers HTTP**: La herramienta no analiza contenido HTML, JavaScript, ni realiza escaneo activo
 2. **Sin autenticacion**: No soporta escaneo detras de login ni sesiones autenticadas
 3. **Sin analisis de contenido**: No detecta vulnerabilidades XSS o SQLi en el cuerpo de la respuesta
-4. **Sin almacenamiento**: No guarda historial de escaneos, cada analisis es independiente
+4. **Historial en SQLite**: Los escaneos se guardan automaticamente en una base de datos SQLite local (`data/scans.db`). Se puede consultar, cargar y eliminar escaneos previos via API o interfaz web. El historial es local al servidor — no hay sincronizacion entre instancias
 5. **Dependencia de red**: Los resultados dependen de la conectividad con el destino; firewalls, WAFs y CDNs pueden afectar los headers recibidos
 6. **CSP basico**: El analisis de CSP verifica directivas principales pero no evalua la politica completa
-7. **Scope academico**: La herramienta fue desarrollada como proyecto de master y no debe usarse como unico instrumento de auditoria profesional
+7. **Scope academico**: La herramienta fue desarrollada como proyecto de master y **no debe usarse como unico instrumento de auditoria profesional**
+8. **CVEs**: Combina base local (20 CVEs) con consulta en tiempo real a OSV.dev (millones de registros). La consulta a OSV.dev depende de conectividad a Internet. La ausencia de deteccion NO implica que el sitio este libre de vulnerabilidades
+9. **Compliance indicativo**: El mapeo a frameworks normativos es automatico y parcial. No reemplaza una auditoria de compliance real
+10. **Falsos positivos en archivos sensibles**: El escaneo de rutas como `/.env` puede generar falsos positivos. Verificar manualmente cada hallazgo
+11. **Score heuristico**: La ponderacion de headers (CSP=25, HSTS=15, etc.) es una decision de diseno, no un estandar universal
+12. **Solo URLs publicas**: La proteccion SSRF bloquea automaticamente el acceso a IPs privadas, localhost y redes internas. Solo se pueden escanear URLs publicas accesibles desde Internet. Esto incluye bloqueo de rangos `10.x`, `172.16-31.x`, `192.168.x`, `127.x`, `169.254.x` (cloud metadata), y loopback IPv6

@@ -1,8 +1,10 @@
+import { Injectable } from '@nestjs/common';
 import type { HeaderResult } from '../../common/interfaces/header-checker.interface';
 import type { TlsInfo } from '../../common/interfaces/tls-info.interface';
 import type { DnsInfo } from '../../common/interfaces/dns-info.interface';
 import type { ComplianceFinding } from '../interfaces/compliance-finding.interface';
 
+@Injectable()
 export class Nis2Mapper {
   private readonly version = '2023';
 

@@ -31,24 +31,24 @@ const x_xss_protection_checker_1 = require("./checkers/x-xss-protection.checker"
 let AnalyzerService = class AnalyzerService {
     scoreCalculator;
     checkers;
-    constructor(scoreCalculator) {
+    constructor(scoreCalculator, cspChecker, hstsChecker, xFrameOptionsChecker, xContentTypeOptionsChecker, referrerPolicyChecker, permissionsPolicyChecker, cacheControlChecker, corsChecker, setCookieChecker, corpChecker, coopChecker, coepChecker, xPoweredByChecker, serverHeaderChecker, xXssProtectionChecker) {
         this.scoreCalculator = scoreCalculator;
         this.checkers = [
-            new csp_checker_1.CspChecker(),
-            new hsts_checker_1.HstsChecker(),
-            new x_frame_options_checker_1.XFrameOptionsChecker(),
-            new x_content_type_options_checker_1.XContentTypeOptionsChecker(),
-            new referrer_policy_checker_1.ReferrerPolicyChecker(),
-            new permissions_policy_checker_1.PermissionsPolicyChecker(),
-            new cache_control_checker_1.CacheControlChecker(),
-            new cors_checker_1.CorsChecker(),
-            new set_cookie_checker_1.SetCookieChecker(),
-            new corp_checker_1.CorpChecker(),
-            new coop_checker_1.CoopChecker(),
-            new coep_checker_1.CoepChecker(),
-            new x_powered_by_checker_1.XPoweredByChecker(),
-            new server_header_checker_1.ServerHeaderChecker(),
-            new x_xss_protection_checker_1.XXssProtectionChecker(),
+            cspChecker,
+            hstsChecker,
+            xFrameOptionsChecker,
+            xContentTypeOptionsChecker,
+            referrerPolicyChecker,
+            permissionsPolicyChecker,
+            cacheControlChecker,
+            corsChecker,
+            setCookieChecker,
+            corpChecker,
+            coopChecker,
+            coepChecker,
+            xPoweredByChecker,
+            serverHeaderChecker,
+            xXssProtectionChecker,
         ];
     }
     analyze(rawHeaders) {
@@ -91,6 +91,21 @@ let AnalyzerService = class AnalyzerService {
 exports.AnalyzerService = AnalyzerService;
 exports.AnalyzerService = AnalyzerService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [score_calculator_1.ScoreCalculator])
+    __metadata("design:paramtypes", [score_calculator_1.ScoreCalculator,
+        csp_checker_1.CspChecker,
+        hsts_checker_1.HstsChecker,
+        x_frame_options_checker_1.XFrameOptionsChecker,
+        x_content_type_options_checker_1.XContentTypeOptionsChecker,
+        referrer_policy_checker_1.ReferrerPolicyChecker,
+        permissions_policy_checker_1.PermissionsPolicyChecker,
+        cache_control_checker_1.CacheControlChecker,
+        cors_checker_1.CorsChecker,
+        set_cookie_checker_1.SetCookieChecker,
+        corp_checker_1.CorpChecker,
+        coop_checker_1.CoopChecker,
+        coep_checker_1.CoepChecker,
+        x_powered_by_checker_1.XPoweredByChecker,
+        server_header_checker_1.ServerHeaderChecker,
+        x_xss_protection_checker_1.XXssProtectionChecker])
 ], AnalyzerService);
 //# sourceMappingURL=analyzer.service.js.map

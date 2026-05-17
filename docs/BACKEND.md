@@ -1,4 +1,7 @@
-# Backend: Passive HTTP Security Header Scanner
+# Backend: Security Header Scanner & Quick Assessment Tool
+
+> ⚠️ **PROYECTO ACADEMICO** — Esta herramienta fue desarrollada como proyecto de Master en Ciberseguridad.
+> Los resultados son orientativos. No utilizar como unico instrumento de auditoria profesional.
 
 Documentacion tecnica detallada del backend NestJS.
 
@@ -14,42 +17,54 @@ Documentacion tecnica detallada del backend NestJS.
 - [Sistema de Scoring](#sistema-de-scoring)
 - [Header Checkers](#header-checkers)
 - [Mapeo de Compliance](#mapeo-de-compliance)
+- [Seguridad](#seguridad)
+  - [API Key](#api-key)
+  - [Rate Limiting](#rate-limiting)
+  - [CORS](#cors)
+  - [SSRF Protection](#ssrf-protection)
+  - [Request Logging](#request-logging)
+  - [Timeouts Configurables](#timeouts-configurables)
 - [Manejo de Errores](#manejo-de-errores)
 - [Validacion de Entrada](#validacion-de-entrada)
 - [Testing](#testing)
 
 ## Arquitectura
 
-El backend sigue la arquitectura modular de NestJS con 4 modulos funcionales independientes. Cada modulo encapsula una responsabilidad del dominio y se comunica con los demas a traves de la inyeccion de dependencias de NestJS.
+El backend sigue la arquitectura modular de NestJS con 6 modulos funcionales independientes. Cada modulo encapsula una responsabilidad del dominio y se comunica con los demas a traves de la inyeccion de dependencias de NestJS. Todos los servicios, checkers (15) y mappers (4) estan registrados como providers y se inyectan via constructor — no se utiliza `new` en ningun punto del codigo de produccion.
 
 ```
-HTTP Request (POST /api/scan)
-       |
-       v
-  ScannerController  -->  ValidationPipe (DTO)
-       |
-       v
-  ScannerService (orquestador)
-       |
-       +---> HttpClientService (fetch HTTP)
-       |          |
-       |          v
-       +---> TlsCheckerService (TLS/SSL en paralelo)
-       |          |
-       |          v
-       +---> AnalyzerService (15 checkers)
-       |          |
-       |          +---> ScoreCalculator
-       |
-       +---> ComplianceService
-       |          |
-       |          +---> Owaspmapper
-       |          +---> Nis2Mapper
-       |
-       +---> ReportService (genera JSON)
-       |
-       v
-  JSON Response
+HTTP Request (POST /api/scan)        HTTP Request (GET /api/scan/stream)
+       |                                          |
+       v                                          v
+  ScannerController  -->  ValidationPipe     ScannerController (SSE)
+       |                                          |
+       v                                          v
+  ScannerService.scan(url)                ScannerService.scanStream(url)
+       |                                          |
+       +---> scanCore(url)                 scanCore(url, onProgress)
+       |                                          |
+       |                                    + eventos SSE por etapa
+       |                                    |
+       +---> HttpClientService            HttpClientService
+       +---> TlsCheckerService            TlsCheckerService
+       +---> DnsCheckerService            DnsCheckerService
+       +---> SecurityFileChecker          SecurityFileChecker
+       +---> SensitiveFileChecker         SensitiveFileChecker
+       +---> SriChecker                   SriChecker
+       +---> TechFingerprinter            TechFingerprinter
+       +---> CveApiService (OSV.dev)      CveApiService (OSV.dev)
+       |                                          |
+       v                                          v
+  AnalyzerService  ─── ScoreCalculator     AnalyzerService  ─── ScoreCalculator
+       |                                          |
+       v                                          v
+  ComplianceService                          ComplianceService
+  (OWASP, NIS2, ENS, ISO 27001)             (OWASP, NIS2, ENS, ISO 27001)
+       |                                          |
+       v                                          v
+  ReportService (JSON)                      HistoryService (SQLite auto-save)
+
+  JSON Response                              SSE stream: eventos + reporte final
 ```
 
 ### Flujo de datos
@@ -84,12 +99,16 @@ interface HeaderChecker {
 Esta interfaz es el contrato que todos los checkers implementan. El metodo `analyze` recibe el valor del header (o `undefined` si no existe) y devuelve un `HeaderResult` con la calificacion, hallazgo y recomendacion.
 
 **Archivos del common:**
+- `config/cors.config.ts` - Configuracion CORS (restringido a `http://localhost:5173` por defecto, configurable via `CORS_ORIGIN`)
+- `config/security.config.ts` - Configuracion de seguridad (API Key, etc.)
 - `interfaces/header-checker.interface.ts` - Interface HeaderChecker + tipo HeaderResult
 - `interfaces/scan-result.interface.ts` - Tipos ScanResult, ComplianceSection, ComplianceFinding, ScanMetadata
 - `enums/severity.enum.ts` - Constantes SEVERITY y SEVERITY_WEIGHTS (pattern `as const`)
 - `constants/header-weights.ts` - Configuracion de los 15 headers con nombre, severidad, peso, valor esperado
+- `constants/timeout.config.ts` - Timeouts configurables para 8 subsistemas
 - `filters/http-exception.filter.ts` - Filtro global de excepciones HTTP
-- `pipes/url-validation.pipe.ts` - Pipe de validacion de URL
+- `pipes/url-validation.pipe.ts` - Pipe de validacion de URL con proteccion SSRF
+- `guards/ssrf.guard.ts` - Utilidades de proteccion SSRF (isPrivateIp, isBlockedHostname, resolveAndCheckHostname)
 
 ### Scanner Module
 
@@ -128,438 +147,257 @@ Configuracion: timeout 10s, max 5 redirects, `validateStatus: () => true` (acept
 
 **`src/scanner/scanner.service.ts`**
 
-Orquestador del flujo completo:
-```typescript
-async scan(url: string): Promise<ScanResult> {
-  const httpResult = await this.httpClient.fetch(url);
-  const analysisResult = this.analyzer.analyze(httpResult.headers);
-  const complianceResult = this.compliance.evaluate(analysisResult.headers);
-  const report = this.report.generate({ ... });
-  return report;
-}
+Orquestador del flujo completo. Implementa el patrón **Template Method** para eliminar duplicación entre scan normal y streaming:
+
 ```
+scan() ──────────────────┐
+                          ├──→ scanCore() ──→ checks → report
+scanStream(url) ──┐      │
+                  ├──→ scanCore(url, emit) ──→ checks + events → report
+                  │
+           (Subject → Observable)
+```
+
+- `scanCore(url, onProgress?)`: método privado con TODA la lógica central. Recibe un callback opcional `onProgress` que emite eventos de progreso por etapa. Si no se provee, los emits son no-ops.
+- `scan(url)`: llama a `scanCore()` sin callback y persiste el reporte en historial SQLite
+- `scanStream(url)`: llama a `scanCore()` con un callback que emite eventos a un `Subject`, retornando un `Observable` para SSE
+
+**Etapas de progreso emitidas por `scanStream()`:**
+
+| Etapa | Descripción |
+|-------|-------------|
+| `http` | Solicitud HTTP inicial (headers de respuesta) |
+| `tls` | Verificación de conexión TLS/SSL |
+| `dns` | Consulta de registros DNS (SPF, DKIM, DMARC) |
+| `security-files` | Archivos de seguridad (robots.txt, security.txt) |
+| `sensitive-files` | Escaneo de rutas sensibles (40 rutas) |
+| `sri` | Análisis de integridad de recursos (SRI) |
+| `fingerprint` | Identificación de tecnologías + consulta OSV.dev |
+| `analysis` | Cálculo de score y compliance |
+| `complete` | Escaneo finalizado, reporte listo |
 
 ### TechFingerprinterService
 
-Servicio de fingerprinting que identifica tecnologias del servidor, CMS, frameworks y runtimes, y las contrasta con una base de datos de CVEs conocidos.
+Servicio de fingerprinting que identifica tecnologias del servidor, CMS, frameworks y runtimes, y las contrasta con CVEs mediante consulta a OSV.dev + base local de respaldo.
 
 **Ubicacion:** `src/scanner/fingerprint/tech-fingerprinter.service.ts`
 
-**Firmas de deteccion (13 tecnologias):**
+**Firmas de deteccion (23 tecnologias):**
 
 | Tecnologia | Categoria | Metodo de deteccion |
 |------------|-----------|---------------------|
 | WordPress | CMS | Meta generator, wp-content paths, wp-json REST API |
 | Joomla | CMS | Meta generator, component/module paths |
 | Drupal | CMS | Meta generator, sites/default paths |
+| Vite | CMS | `<script type="module" src="/@vite/...">` |
+| Next.js | CMS | `__NEXT_DATA__`, headers `x-nextjs-*` |
+| Nuxt.js | CMS | `__NUXT__` script |
 | PHP | Runtime | X-Powered-By header |
 | Express | Framework | X-Powered-By header |
 | ASP.NET | Framework | X-AspNet-Version header, cookies |
 | Laravel | Framework | X-Powered-By header |
 | Django | Framework | X-Powered-By, WSGI server |
+| Ruby on Rails | Framework | X-Rack-Cache, X-Runtime, `_session_id` cookie |
 | Nginx | Server | Server header |
 | Apache | Server | Server header |
+| Tomcat | Server | `Server: Apache-Coyote` |
+| IIS | Server | Server header + X-AspNet-Version |
+| Gunicorn | Server | `Server: gunicorn` |
 | Cloudflare | CDN | cf-ray, cf-cache-status headers |
+| Node.js | Runtime | `connect.sid` cookie, X-Powered-By Express |
+| Python | Runtime | `Server: Python/` |
 | jQuery | Libreria | Script src references en HTML |
 | Bootstrap | Framework | Stylesheet references en HTML |
-
-**Base de datos de CVEs:** 20 CVEs conocidos para WordPress, Joomla, Drupal, PHP, Apache y Nginx, mapeados por rango de version semantica.
+| Google Analytics | CMS | Script de analytics |
 
 **Flujo:**
 1. Toma los headers HTTP ya obtenidos por el HttpClientService
 2. Fetch del HTML de la URL (best-effort, tolera fallos)
-3. Ejecuta las 13 firmas de deteccion
+3. Ejecuta las 23 firmas de deteccion
 4. Desduplica tecnologias por nombre (prioriza mayor confianza)
-5. Contrasta versiones detectadas contra la base de datos de CVEs
-6. Calcula grade: 1.0 sin CVEs, 0.2 si hay CVEs critical, 0.4 si high, 0.6 si medium
+5. Contrasta versiones detectadas contra la base de datos local de 20 CVEs
+6. Consulta API de OSV.dev para cada tecnologia con version detectada
+7. Fusiona resultados (locales + OSV), deduplicando por CVE ID
+8. Calcula grade: 1.0 sin CVEs, 0.2 si hay CVEs critical, 0.4 si high, 0.6 si medium
 
-### SriCheckerService
+### CveApiService
 
-Servicio que analiza el HTML de la pagina objetivo en busca de recursos externos y verifica que tengan atributo `integrity` (SRI - Subresource Integrity).
+Servicio que consulta la API pública de OSV.dev (Google Open Source Vulnerabilities) para obtener CVEs actualizados.
 
-**Ubicacion:** `src/scanner/content/sri-checker.service.ts`
+**Ubicacion:** `src/scanner/fingerprint/cve-api.service.ts`
 
-**Que analiza:**
-- Etiquetas `<script src="...">` con y sin integridad
-- Etiquetas `<link rel="stylesheet" href="...">` con y sin integridad
-- Parseo con expresiones regulares sobre el HTML
-
-**Grade:** Proporcion de recursos seguros vs totales. 1.0 si todos tienen integrity, 0 si ninguno.
-
-### SensitiveFileCheckerService
-
-Servicio que escanea rutas de archivos sensibles en el servidor objetivo para detectar exposiciones accidentales.
-
-**Ubicacion:** `src/scanner/files/sensitive-file-checker.service.ts`
-
-**Rutas escaneadas (40 paths):**
-
-```
-/.env, /.git/config, /phpinfo.php, /web.config, /.htaccess,
-/wp-admin/, /wp-config.php, /admin/, /backup/, /config.php,
-/crossdomain.xml, /Dockerfile, /docker-compose.yml, /credentials.json,
-/.aws/credentials, /.npmrc, /.ssh/, /composer.json, /package.json,
-/database.yml, /debug.log, /error.log, /install/, /logs/, /private/,
-/server-status, /test.php, /Makefile, /robots.txt, /sitemap.xml
-```
-
-**Metodo:** HEAD requests en batches de 5 en paralelo con timeout de 4s. HTTP 200/204 = expuesto. 403/401 = existe pero bloqueado.
-
-**Grade:** 1.0 si no hay expuestos, 0.7 si <=3, 0.4 si <=8, 0.1 si mas.
-
-### SecurityFileCheckerService
-
-Servicio que verifica la existencia y contenido de archivos de seguridad estandar en el servidor web.
-
-**Ubicacion:** `src/scanner/files/security-file-checker.service.ts`
-
-**Archivos verificados:**
-
-| Archivo | Estandar | Que evalua |
-|---------|----------|------------|
-| `/.well-known/security.txt` | RFC 9116 | Campos obligatorios: `Contact:`, `Expires:`. Opcionales: `Encryption:`, `Policy:`, `Hiring:` |
-| `/robots.txt` | Estandar de crawlers | Directivas `User-agent`, `Disallow`, `Allow`, `Sitemap`. Detecta rutas sensibles expuestas (admin, .git, .env, backup, config) |
-
-**Metodo:** Utiliza el mismo `HttpModule` (Axios) que el `HttpClientService`, con timeout de 5s y 3 redirects.
-
-**Analisis security.txt:**
-- `Contact:` presente + `Expires:` presente = grade 1.0
-- Solo `Contact:` presente = grade 0.6
-- Sin `Contact:` = grade 0.3
-- No encontrado (HTTP 404) = grade 0
-
-**Analisis robots.txt:**
-- Con `User-agent` y `Disallow` = grade 0.8
-- Sin `Disallow` = grade 0.4
-- Con rutas sensibles expuestas = grade 0.5
-- Sin `User-agent` = grade 0.2
-- No encontrado = grade 0
-
-**Ejecucion:** Se ejecuta en paralelo con HTTP fetch, TLS check y DNS check via `Promise.all`.
-
-### DnsCheckerService
-
-Servicio que realiza verificaciones de seguridad DNS: SPF, DKIM y DMARC. Se ejecuta en paralelo con HTTP y TLS via `Promise.all`.
-
-**Ubicacion:** `src/scanner/dns/dns-checker.service.ts`
-
-**Tecnologia:** Modulo nativo `dns/promises` de Node.js (resolucion TXT records)
-
-**Registros verificados:**
-
-| Registro | Consulta DNS | Que evalua |
-|----------|-------------|------------|
-| SPF | `TXT {domain}` buscando `v=spf1` | Mecanismo de fail (`-all` = hard, `~all` = soft, `?all` = none), presencia de `include:` |
-| DKIM | `TXT {selector}._domainkey.{domain}` (prueba 6 selectores) | `v=DKIM1`, presencia de clave publica `p=` |
-| DMARC | `TXT _dmarc.{domain}` buscando `v=DMARC1` | Politica (`p=reject`, `p=quarantine`, `p=none`), reporting (`rua`), cobertura (`pct`) |
-
-**Timeout:** 5 segundos por consulta DNS via `AbortController`.
-
-**Grading DNS:**
-```
-SPF:   -all + include   = 1.0
-       ~all             = 0.7
-       presente sin all = 0.4
-       ?all / +all      = 0.2
-       ausente          = 0.0
-
-DKIM:  v=DKIM1 con p=   = 1.0
-       presente sin p=  = 0.5
-       ausente          = 0.0
-
-DMARC: p=reject + rua   = 1.0
-       p=reject         = 0.9
-       p=quarantine+rua = 0.8
-       p=quarantine     = 0.7
-       p=none           = 0.3
-       ausente          = 0.0
-
-Grade total DNS = (SPF.grade + DKIM.grade + DMARC.grade) / 3
-```
-
-### TlsCheckerService
-
-Servicio independiente que realiza una conexion TLS raw con el servidor destino para extraer informacion del protocolo y certificado.
-
-**Ubicacion:** `src/scanner/tls/tls-checker.service.ts`
-
-**Tecnologia:** Node.js `tls` nativo (no Axios, que no expone detalles del certificado)
-
-**Flujo de ejecucion:**
-1. `tls.connect(port, hostname, { servername: hostname, rejectUnauthorized: false })`
-2. En `secureConnect` se obtiene `socket.getProtocol()` (version TLS) y `socket.getPeerCertificate(true)` (certificado completo)
-3. Timeout configurable de 8 segundos
-4. En caso de error, retorna un objeto `TlsInfo` con el campo `error` poblado (NUNCA lanza excepcion)
-
-**Datos extraidos del certificado:**
-
-| Campo | Descripcion |
-|-------|-------------|
-| `subject` | Subject completo del certificado (CN, O, etc.) |
-| `issuer` | Entidad emisora (CA que emitio el certificado) |
-| `validFrom` | Fecha de inicio de validez |
-| `validTo` | Fecha de expiracion |
-| `expiresInDays` | Dias restantes hasta la expiracion |
-| `expired` | Booleano: true si el certificado ha expirado |
-| `selfSigned` | Booleano: true si Subject = Issuer |
-| `wildcard` | Booleano: true si el CN comienza con `*.` |
-| `fingerprint` | SHA256 fingerprint del certificado |
-| `serialNumber` | Numero de serie del certificado |
-| `san` | Lista de Subject Alternative Names (DNS) |
-
-**Calculo del grade TLS:**
-
-El grade TLS se calcula como 50% version del protocolo + 50% calidad del certificado:
-
-```
-tlsScore = version === 'TLSv1.3' ? 1.0
-         : version === 'TLSv1.2' ? 0.8
-         : version === 'TLSv1.1' ? 0.3
-         : version === 'TLSv1'   ? 0.0
-         :                          0.5
-
-certScore = expired       ? 0.0
-          : selfSigned    ? 0.3
-          : wildcard      ? 0.7
-          :                 1.0
-
-// Penalizacion adicional por expiracion proxima
-if (expiresInDays < 30)  certScore = min(certScore, 0.5)
-if (expiresInDays < 90)  certScore = min(certScore, 0.8)
-
-tlsGrade = tlsScore * 0.5 + certScore * 0.5
-```
-
-**Ejecucion en paralelo:** El `ScannerService` ejecuta `HttpClientService.fetch()` y `TlsCheckerService.check()` simultaneamente mediante `Promise.all`. Esto asegura que el escaneo TLS no agregue latencia adicional significativa.
-
-### Analyzer Module
-
-Corazon del sistema. Contiene el motor de analisis y los 15 checkers individuales.
-
-**`src/analyzer/analyzer.service.ts`**
-- Normaliza los nombres de headers a minusculas (HTTP headers son case-insensitive)
-- Itera sobre `HEADER_WEIGHTS` (15 entradas) y ejecuta el checker correspondiente
-- Si un checker no esta implementado, usa un fallback generico con grade 0.5
-- Retorna `AnalysisResult` con headers[], score, grade
-
-**`src/analyzer/score-calculator.ts`**
-
-Implementa el algoritmo de scoring ponderado:
-
-```
-score = round( sum(weight * grade) / MAX_POSSIBLE_SCORE * 100 )
-```
-
-Donde `MAX_POSSIBLE_SCORE = 165` (suma de todos los pesos). La tabla de grados:
-
-| Rango | Grado |
-|-------|-------|
-| 90-100 | A |
-| 80-89 | B |
-| 70-79 | C |
-| 60-69 | D |
-| 50-59 | E |
-| 0-49 | F |
-
-### Compliance Module
-
-Mapea los resultados del analisis a marcos normativos.
-
-**`src/compliance/mappers/owasp-top10.mapper.ts`**
-
-Mapea a 3 controles del OWASP Top 10 2021:
-
-| Control | Headers Relacionados | Logica |
-|---------|---------------------|--------|
-| A01.1 - CORS Configuration | Access-Control-Allow-Origin | Wildcard = non_compliant, especifico = compliant |
-| A01.2 - Cookie Security | Set-Cookie | Flags faltantes = non_compliant |
-| A05.1 - Critical Security Headers | CSP, HSTS, XFO, CORS, Set-Cookie | Cualquier critical/high con grade < 0.5 = non_compliant |
-| A05.2 - High Priority Headers | (high severity) | High con grade < 0.5 = partially_compliant |
-| A05.3 - TLS Configuration | TLS info (version, cert) | TLS < 1.2, expirado, self-signed = non_compliant |
-| A06.1 - Information Disclosure | X-Powered-By, Server | Presente = non_compliant |
-
-**`src/compliance/mappers/nis2.mapper.ts`**
-
-Mapea a 4 controles del Articulo 21 de la Directiva NIS2 2023:
-
-| Control | Headers Relacionados | Logica |
-|---------|---------------------|--------|
-| Art.21(c) - Access Control | CORS, Set-Cookie, COOP | Configuracion debil = non_compliant |
-| Art.21(d) - Incident Handling | CSP (report-uri/report-to) | Sin reporting = partially_compliant |
-| Art.21(g) - Supply Chain Security | CORP, COEP | Permisivo = partially_compliant |
-| Art.21(i) - Cryptography | HSTS, TLS info (version, cert) | Sin HSTS = non_compliant. Evalua TLS version real, expiracion de certificado, self-signed. HTTP sin TLS = non_compliant |
-
-### Compliance Mappers
-
-Ademas de los mappers OWASP Top 10 y NIS2, se incorporan dos nuevos marcos normativos:
-
-#### ENS Mapper (`src/compliance/mappers/ens.mapper.ts`)
-
-Mapea los hallazgos contra el Esquema Nacional de Seguridad (Real Decreto 311/2022):
-
-| Control | Evalua | Descripcion |
-|---------|--------|-------------|
-| op.acc.2 - Control de acceso | CORS, COOP, Set-Cookie | Accesos no autorizados desde origen cruzado |
-| op.exp.5 - Proteccion de informacion | X-Powered-By, Server | Fuga de informacion tecnologica |
-| op.pl.3 - Seguridad perimetral | CSP, HSTS, X-Frame-Options | Defensa del perimetro web |
-| op.mon.2 - Monitorizacion | DMARC | Capacidad de monitoreo de correo |
-| op.cont.2 - Continuidad | TLS cert expiry | Renovacion de certificados |
-| org.organizacion - Marco organizativo | security.txt | Canal de divulgacion de vulnerabilidades |
-| op.vuln - Gestion de vulnerabilidades | Fingerprinting + CVEs | Parcheado de tecnologias |
-
-#### ISO 27001 Mapper (`src/compliance/mappers/iso27001.mapper.ts`)
-
-Mapea los hallazgos contra la norma ISO 27001:2022:
-
-| Control | Evalua | Descripcion |
-|---------|--------|-------------|
-| A.5.1 - Politicas de seguridad | security.txt | Politica de divulgacion |
-| A.9.1 - Control de acceso | CORS, COOP | Restriccion de accesos |
-| A.10.1 - Controles criptograficos | HSTS, TLS version, cert | Cifrado y comunicaciones seguras |
-| A.12.6 - Gestion de vulnerabilidades | Fingerprinting + CVEs | Vulnerabilidades conocidas |
-| A.13.1 - Seguridad de redes | CSP, XFO, XCTo | Seguridad perimetral |
-| A.13.2 - Transferencia de informacion | TLS | Cifrado en transferencia |
-| A.16.1 - Gestion de incidentes | CSP reporting, DMARC | Deteccion de incidentes |
-| A.18.1 - Cumplimiento normativo | Headers, TLS, DNS | Cumplimiento general |
-
-### Export Service
-
-Servicio para exportar reportes en formatos descargables.
-
-**Ubicacion:** `src/report/export/export.service.ts`
-
-**Metodos:**
-
-| Metodo | Formato | Descripcion |
-|--------|---------|-------------|
-| `generateJson(result)` | JSON | Serializa el ScanResult como JSON indentado |
-| `generatePdf(result)` | PDF | Genera un documento PDF profesional utilizando `pdfkit` |
-
-**Endpoint:** `POST /api/export`
-
-**Estructura del PDF generado:**
-1. **Header** - titulo, URL, fecha, metadata duracion/status
-2. **Score** - Grado y puntaje con descripcion visual y texto explicativo
-3. **TLS/SSL** - Version TLS, grade, datos del certificado (sujeto, emisor, validez, SAN)
-4. **Headers de Seguridad** - Lista de los 15 headers con severidad, grade, hallazgo y recomendacion
-5. **Cumplimiento Normativo** - OWASP Top 10 y NIS2 con estados coloreados
-6. **Recomendaciones** - Lista priorizada por severidad (CRITICAL primero)
-7. **Footer** - Fecha de generacion y version de la herramienta
-
-**Endpoint:** `POST /api/export`
+**Endpoint:** `POST https://api.osv.dev/v1/query`
 
 **Request:**
 ```json
-{ "url": "https://example.com", "format": "pdf" }
+{ "package": { "name": "nginx" }, "version": "1.24.0" }
 ```
 
-**Response:** Archivo descargable con headers `Content-Disposition: attachment` y `Content-Type` adecuado.
+**Caracteristicas:**
+### HistoryService
 
-### Report Module
+**Ubicacion:** `src/history/history.service.ts`
 
-Genera la respuesta JSON final.
+Servicio que persiste los resultados de escaneos en una base de datos SQLite via `better-sqlite3`.
 
-**`src/report/report.service.ts`**
-- Compone el objeto `ScanResult` con todos los datos
-- Genera recomendaciones ordenadas por severidad (critical primero, low ultimo)
-- Las recomendaciones incluyen el prefijo `[CRITICAL]`, `[HIGH]`, `[MEDIUM]`, `[LOW]`
+**Tabla:** `scans` con los campos `id`, `url`, `score`, `grade`, `timestamp`, `data` (JSON blob del reporte completo).
 
-## Sistema de Scoring
+**Endpoints expuestos via `HistoryController`:**
 
-### Pesos por Severidad
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| `GET` | `/api/history` | Lista todos los escaneos (sin datos completos) |
+| `GET` | `/api/history/:id` | Obtiene un escaneo completo por ID |
+| `POST` | `/api/history` | Guarda un escaneo manualmente |
+| `DELETE` | `/api/history/:id` | Elimina un escaneo |
 
-| Severidad | Peso |
-|-----------|------|
-| critical | 25 |
-| high | 15 |
-| medium | 10 |
-| low | 5 |
+**Auto-save:** Cada escaneo exitoso via `POST /api/scan` se persiste automaticamente en `ScannerService.scan()`. Los escaneos via `scanStream()` (SSE) NO se guardan automaticamente.
 
-### Grade TLS
+**Ubicacion de la base de datos:** `data/scans.db` (relativa a la raiz del proyecto).
 
-El grade TLS se calcula independientemente de los headers y se incluye en el reporte como informacion adicional. No afecta el score general del scanner (basado en headers). Ver seccion `TlsCheckerService` para el algoritmo completo.
+- Cache en memoria con TTL de 30 minutos para evitar rate limiting
+- Fallback silencioso: si la API no responde, continua solo con la base local
+- Mapeo de nombres de tecnologia a nombres OSV (ej: "Nginx" → "nginx", "WordPress" → "wordpress")
+- Extraccion de severidad desde CVSS score o database_specific
+- Deduplicacion por CVE ID (prioriza alias CVE sobre IDs de USN/GHSA)
 
-### Calculo por Header
+## Seguridad
 
-Cada header recibe un `grade` entre 0.0 y 1.0 segun estas reglas generales:
+### API Key
 
-| Estado | Grade |
-|--------|-------|
-| Header presente y valor correcto | 1.0 |
-| Header presente pero valor suboptimo | 0.3 - 0.8 (segun header) |
-| Header presente pero valor incorrecto | 0.0 - 0.3 |
-| Header ausente | 0.0 |
+**Ubicacion:** `src/common/guards/api-key.guard.ts`
 
-Excepciones notables:
-- `Access-Control-Allow-Origin`: ausente = 1.0 (sin CORS = seguro por defecto)
-- `Set-Cookie`: ausente = 1.0 (sin cookies = seguro por defecto)
-- `X-Powered-By`: ausente = 1.0 (sin fuga de informacion)
-- `Server`: ausente = 1.0
-- `X-XSS-Protection`: ausente = 1.0 (deprecado, se prefiere CSP)
+El `ApiKeyGuard` protege todos los endpoints del `ScannerController`. Verifica el header `X-API-Key` en cada request.
 
-### Recomendaciones
+- Configurable via variable de entorno `API_KEY`
+- Si `API_KEY` esta vacio (default), la autenticacion esta deshabilitada
+- Si esta configurado, las requests sin el header correcto reciben `401 Unauthorized`
 
-El `ReportService` recolecta todas las recomendaciones de headers con `grade < 1.0` y las ordena por severidad descendente, agregando el prefijo `[SEVERIDAD]`.
+```typescript
+// Uso con API Key
+curl -X POST http://localhost:3000/api/scan \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: mi-clave" \
+  -d '{"url":"https://example.com"}'
+```
 
-## Header Checkers
+### Rate Limiting
 
-Cada checker es una clase que implementa `HeaderChecker`. A continuacion el detalle de cada uno:
+**Configuracion:** `src/app.module.ts` via `@nestjs/throttler`
 
-### CSP (critical, peso 25)
-- Evalua presencia de `default-src`, `script-src`, `object-src`
-- Detecta `unsafe-inline` y `unsafe-eval` (penaliza a grade <= 0.4)
-- Policy estricta sin unsafe-inline/eval + directivas clave = grade 1.0
+| Parametro | Default | Variable de entorno |
+|-----------|---------|-------------------|
+| Max requests | 20 | `RATE_LIMIT_MAX` |
+| Ventana | 60000ms (1 min) | `RATE_LIMIT_WINDOW_MS` |
 
-### HSTS (high, peso 15)
-- Evalua `max-age` (>= 31536000 = mejor)
-- Detecta `includeSubDomains` y `preload`
-- Sin header = grade 0, completo = grade 1.0
+Aplica a los endpoints `POST /api/scan` y `POST /api/export`. Las requests que exceden el limite reciben `429 Too Many Requests`.
 
-### X-Frame-Options (high, peso 15)
-- `DENY` = 1.0, `SAMEORIGIN` = 0.8, `ALLOW-FROM` = 0.5
+### CORS
 
-### X-Content-Type-Options (medium, peso 10)
-- `nosniff` = 1.0, cualquier otro valor = 0.3
+**Ubicacion:** `src/common/config/cors.config.ts`
 
-### Referrer-Policy (medium, peso 10)
-- Politicas estrictas (`no-referrer`, `strict-origin-when-cross-origin`, etc.) = 1.0
-- `unsafe-url` = 0.3, otros = 0.5
+La configuracion CORS se centraliza en un unico archivo y se aplica en `main.ts` al crear la aplicacion:
 
-### Permissions-Policy (medium, peso 10)
-- Detecta wildcards `(*)` (penaliza a 0.2)
-- Presencia de restricciones a APIs sensibles mejora el grade
+```typescript
+const app = await NestFactory.create(AppModule, { cors: CORS_CONFIG });
+```
 
-### Cache-Control (medium, peso 10)
-- `no-store` = 1.0, `no-cache + private` = 0.7, `public` = 0.2
+| Parametro | Default | Variable de entorno |
+|-----------|---------|-------------------|
+| Origen permitido | `http://localhost:5173` | `CORS_ORIGIN` |
+| Metodos | GET, POST, DELETE | — |
+| Credentials | true | — |
 
-### CORS (high, peso 15)
-- Ausente = 1.0 (seguro), origen especifico = 1.0
-- Wildcard `*` = 0, `null` = 0.1
+Por defecto solo permite conexiones desde el frontend de desarrollo (Vite en puerto 5173). Para entornos de produccion con otros origenes, configurar `CORS_ORIGIN` con la URL del frontend o `*` para abrir a todos (no recomendado).
 
-### Set-Cookie (high, peso 15)
-- Analiza cada cookie individualmente (soportando multiples cookies)
-- Evalua flags: `Secure`, `HttpOnly`, `SameSite`
-- Toma el peor grade entre todas las cookies
-- Maneja correctamente comas en fechas de expiracion
+### SSRF Protection
 
-### CORP (medium, peso 10)
-- `same-origin` = 1.0, `same-site` = 0.8, `cross-origin` = 0.1
+**Ubicacion:** `src/common/guards/ssrf.guard.ts` y `src/common/pipes/url-validation.pipe.ts`
 
-### COOP (medium, peso 10)
-- `same-origin` = 1.0, `same-origin-allow-popups` = 0.6, `unsafe-none` = 0
+La proteccion contra **Server-Side Request Forgery (SSRF)** se implementa en dos capas de defensa en profundidad:
 
-### COEP (low, peso 5)
-- `require-corp` = 1.0, `credentialless` = 0.6, `unsafe-none` = 0
+#### Capa 1: Validacion estatica (UrlValidationPipe)
 
-### X-Powered-By (low, peso 5)
-- Ausente = 1.0, presente = 0 (fuga de informacion)
+Se ejecuta en el punto de entrada de la API (controller) y rechaza URLs que apunten a:
 
-### Server (low, peso 5)
-- Ausente = 1.0, minimal (`cloudflare`, `nginx`) = 0.5, verbose = 0
+| Categoria | Ejemplos bloqueados |
+|-----------|---------------------|
+| IPv4 privadas | `10.0.0.1`, `172.16.0.1`, `192.168.1.1` |
+| Loopback | `127.0.0.1`, `127.0.0.255` |
+| Link-local (cloud metadata) | `169.254.169.254` (AWS/GCP/Azure metadata) |
+| IPv6 loopback | `::1`, `[::1]`, `::` |
+| Hostnames reservados | `localhost`, `localhost.localdomain`, `0.0.0.0` |
 
-### X-XSS-Protection (low, peso 5)
-- Ausente o `0` = 1.0 (deprecado, CSP es el mecanismo moderno)
-- `1; mode=block` = 0.3 (obsoleto)
+#### Capa 2: Resolucion DNS dinamica (antes de cada request)
+
+Antes de que cualquier servicio realice una peticion HTTP o conexion TLS, se resuelve el hostname y se verifica que **ninguna** de las IPs devueltas sea privada. Esto mitiga ataques de **DNS rebinding**, donde un dominio apunta primero a una IP publica y luego cambia a una privada.
+
+> **Nota TOCTOU:** Existe una ventana teorica entre la resolucion DNS y la conexion real donde un atacante con control de DNS podria cambiar la IP. Para un proyecto academico esta proteccion es suficiente. Para produccion se recomendaria un resolver DNS custom o controles a nivel de red.
+
+**Servicios protegidos:**
+- `HttpClientService` — peticion HTTP principal
+- `TlsCheckerService` — conexion TLS/SSL
+- `SecurityFileCheckerService` — robots.txt, security.txt
+- `SensitiveFileCheckerService` — escaneo de 40 rutas sensibles
+- `SriCheckerService` — analisis de integridad de recursos
+- `TechFingerprinterService` — deteccion de tecnologias (best-effort)
+
+**Funciones del SSRF guard:**
+
+```typescript
+// Verifica si una IP es privada (IPv4 e IPv6)
+isPrivateIp(ip: string): boolean
+
+// Verifica si un hostname esta en la lista de bloqueados
+isBlockedHostname(hostname: string): boolean
+
+// Resuelve DNS y rechaza si alguna IP es privada
+async resolveAndCheckHostname(hostname: string): Promise<string>
+```
+
+**Rangos de IPs bloqueadas:**
+
+| Rango | Descripcion |
+|-------|-------------|
+| `10.0.0.0/8` | Red privada clase A |
+| `172.16.0.0/12` | Red privada clase B |
+| `192.168.0.0/16` | Red privada clase C |
+| `127.0.0.0/8` | Loopback |
+| `169.254.0.0/16` | Link-local (metadata de cloud) |
+| `0.0.0.0/8` | Red no especificada |
+| `::1` | IPv6 loopback |
+| `fc00::/7` | IPv6 unique local |
+| `fe80::/10` | IPv6 link-local |
+
+### Request Logging
+
+**Ubicacion:** `src/common/middleware/request-logger.middleware.ts`
+
+Middleware que registra cada request HTTP entrante:
+
+```
+HTTP POST /api/scan 200 8432ms - ::1
+HTTP GET /api/scan/stream 200 7541ms - 192.168.1.5
+```
+
+Formato: `[metodo] [ruta] [status] [duracion]ms - [ip]`
+
+### Timeouts Configurables
+
+**Ubicacion:** `src/common/constants/timeout.config.ts`
+
+Todos los timeouts del sistema se centralizan en un unico archivo y son configurables via variables de entorno:
+
+| Subsistema | Default | Variable de entorno |
+|-----------|---------|-------------------|
+| HTTP Client global | 10s | `TIMEOUT_HTTP_CLIENT` |
+| Page fetch (HTML) | 8s | `TIMEOUT_PAGE_FETCH` |
+| TLS/SSL socket | 8s | `TIMEOUT_TLS` |
+| DNS queries | 5s | `TIMEOUT_DNS` |
+| Security files | 5s | `TIMEOUT_SECURITY_FILE` |
+| Sensitive files | 4s | `TIMEOUT_SENSITIVE_FILE` |
+| SRI HTML fetch | 10s | `TIMEOUT_SRI` |
+| OSV.dev CVE API | 8s | `TIMEOUT_CVE_API` |
 
 ## Manejo de Errores
 
@@ -584,6 +422,9 @@ Captura todas las excepciones no manejadas y retorna un JSON consistente:
 | URL invalida | 400 | Mensaje del ValidationPipe |
 | URL vacia | 400 | URL is required |
 | Protocolo no HTTP | 400 | Only HTTP and HTTPS URLs are allowed |
+| SSRF - IP privada | 400 | Access to private IP address {ip} is not allowed |
+| SSRF - hostname bloqueado | 400 | Access to {hostname} is not allowed |
+| SSRF - DNS rebinding | 403 | DNS resolution for {hostname} returned private IP {ip}. Access blocked to prevent SSRF. |
 | Timeout | 504 | Request to {url} timed out |
 | DNS falla | 502 | Could not resolve hostname for {url} |
 | Conexion rechazada | 502 | Connection refused by {url} |
@@ -597,7 +438,8 @@ Captura todas las excepciones no manejadas y retorna un JSON consistente:
 - Rechaza URLs vacias
 - Limita longitud maxima a 2048 caracteres
 - Solo permite protocolos `http:` y `https:`
-- Verifica que el hostname sea un FQDN (contenga al menos un punto) o sea localhost/127.0.0.1
+- Verifica que el hostname sea un FQDN (contenga al menos un punto)
+- **Proteccion SSRF**: bloquea IPs privadas (10.x, 172.16-31.x, 192.168.x, 127.x, 169.254.x, 0.x), localhost, y variantes de loopback IPv6
 
 ### DTO Validation (`ScanRequestDto`)
 
@@ -609,13 +451,28 @@ Captura todas las excepciones no manejadas y retorna un JSON consistente:
 
 ## Testing
 
-### Tests Unitarios (83 tests)
+### Tests Unitarios (33 suites)
 
 Los tests unitarios cubren:
-- Cada checker individualmente (15 archivos de test)
+- Cada checker individualmente (15 archivos de test) — todos con `@Injectable()`
 - Score calculator con combinaciones de headers
-- Mappers de compliance (OWASP y NIS2)
-- ScannerService con dependencias mockeadas
+- Mappers de compliance (OWASP, NIS2) — todos con `@Injectable()`
+- ScannerService con dependencias mockeadas (incluye 19 providers de DI)
+- ScannerService.scanStream con Subject mocking
+- HttpClientService (timeouts, DNS errors, SSL errors)
+- TlsCheckerService (grade calculation directa, SSRF bypassed en tests)
+- DnsCheckerService (SPF, DKIM, DMARC, timeouts, no records)
+- TechFingerprinterService (23 firmas de deteccion)
+- CveApiService (OSV.dev cache, fallback, error handling)
+- ExportService (PDF generation, JSON export)
+- HistoryService (save, findAll, findOne, delete, ping)
+- SensitiveFileCheckerService (40 rutas, soft 404 detection)
+- SecurityFileCheckerService (robots.txt, security.txt)
+- SriCheckerService (integrity attribute parsing)
+- ApiKeyGuard (valid key, missing key, disabled auth)
+- AllExceptionsFilter (HTTP exception, unknown exception)
+- **SsrfGuard** (isPrivateIp IPv4/IPv6, isBlockedHostname, resolveAndCheckHostname, DNS rebinding)
+- **UrlValidationPipe** (SSRF protection: private IPs, localhost, link-local, IPv6 loopback)
 
 Patron de test para checkers:
 ```typescript
