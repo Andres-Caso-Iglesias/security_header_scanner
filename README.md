@@ -47,17 +47,17 @@ The tool receives a URL via REST API, performs an HTTP request to the same, extr
 
 ### Appropriate Use Cases
 
-- ✅ Academic training in cybersecurity
-- ✅ Demonstration of web security concepts
-- ✅ Quick and informal HTTP header verification
-- ✅ Personal projects and experimentation
+- Academic training in cybersecurity
+- Demonstration of web security concepts
+- Quick and informal HTTP header verification
+- Personal projects and experimentation
 
 ### INAPPROPRIATE Use Cases
 
-- ❌ Professional or contractual security audits
-- ❌ Decision making without manual verification
-- ❌ Formal compliance norm evaluation
-- ❌ Sole tool in a pentesting process
+- Professional or contractual security audits
+- Decision making without manual verification
+- Formal compliance norm evaluation
+- Sole tool in a pentesting process
 
 ## Technology Stack
 
